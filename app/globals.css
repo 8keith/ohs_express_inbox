@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --teal: #1D9E75;
+  --teal-light: #E1F5EE;
+  --teal-dark: #0F6E56;
+  --amber: #EF9F27;
+  --amber-light: #FAEEDA;
+  --red: #E24B4A;
+  --red-light: #FCEBEB;
+  --gray-50: #F8F8F7;
+  --gray-100: #F0EFEB;
+  --gray-400: #A0A09A;
+  --gray-600: #5F5E5A;
+  --gray-900: #1A1A18;
+  --border: #E8E7E2;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  color: var(--gray-900);
+  background-color: var(--gray-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
+}
+
+/* Staggered pulse dots */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+.pulse-dot-2 {
+  animation: pulse-dot 1.6s ease-in-out 0.2s infinite;
+}
+.pulse-dot-3 {
+  animation: pulse-dot 1.6s ease-in-out 0.4s infinite;
+}
