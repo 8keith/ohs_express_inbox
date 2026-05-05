@@ -21,6 +21,7 @@ interface QueueRow {
   claim_expires_at: string | null
   gmail_message_id: string | null
   gmail_thread_id: string | null
+  subject: string | null
 }
 
 // Kept for the centre panel (static until Gmail wiring)
@@ -287,7 +288,7 @@ export default function Page() {
     const { data, error } = await supabase
       .from('email_events')
       .select(
-        'id, tier, urgency, inquiry_type, received_at, status, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id'
+        'id, tier, urgency, inquiry_type, subject, received_at, status, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id'
       )
     if (error) {
       setFetchError(error.message)
@@ -599,7 +600,7 @@ export default function Page() {
                               color: 'var(--gray-900)',
                             }}
                           >
-                            {row.inquiry_type}
+                            {row.subject || row.inquiry_type}
                           </span>
                           <span
                             className="flex-shrink-0 text-[11px]"
