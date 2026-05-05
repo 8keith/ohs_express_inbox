@@ -1,12 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 type Tier = 'Emergency' | 'STAT' | 'Routine'
 type FilterType = 'All' | Tier
 
+// Shape returned from Supabase email_events table
+interface QueueRow {
+  id: string
+  tier: Tier
+  urgency: string
+  inquiry_type: string
+  received_at: string
+  status: string
+  assigned_to_name: string | null
+  claimed_at: string | null
+  claim_expires_at: string | null
+  gmail_message_id: string | null
+  gmail_thread_id: string | null
+}
+
+// Kept for the centre panel (static until Gmail wiring)
 interface EmailItem {
   id: string
   tier: Tier
@@ -20,7 +37,36 @@ interface EmailItem {
   body: string
 }
 
-// ─── Static Placeholder Data ────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const TIER_ORDER: Record<Tier, number> = { Emergency: 0, STAT: 1, Routine: 2 }
+
+function sortQueue(rows: QueueRow[]): QueueRow[] {
+  return [...rows].sort((a, b) => {
+    const t = TIER_ORDER[a.tier] - TIER_ORDER[b.tier]
+    if (t !== 0) return t
+    return new Date(b.received_at).getTime() - new Date(a.received_at).getTime()
+  })
+}
+
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfYesterday = new Date(startOfToday)
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1)
+  const startOfItem = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+
+  if (startOfItem.getTime() === startOfToday.getTime()) {
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  if (startOfItem.getTime() === startOfYesterday.getTime()) {
+    return 'Yesterday'
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+// ─── Static data for centre panel (wired to Gmail in next step) ─────────────
 
 const EMAILS: EmailItem[] = [
   {
@@ -228,23 +274,65 @@ export default function Page() {
   const [draftText, setDraftText] = useState(DRAFT_TEXT)
   const [forwardTo, setForwardTo] = useState(FORWARD_OPTIONS[0])
 
-  const selectedEmail = EMAILS.find((e) => e.id === selectedId)!
-  const filteredEmails =
-    activeFilter === 'All' ? EMAILS : EMAILS.filter((e) => e.tier === activeFilter)
-  const unreadCount = EMAILS.filter((e) => e.unread).length
+  // ── Queue state (live from Supabase) ──
+  const [queue, setQueue] = useState<QueueRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+
+  const fetchQueue = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    const { data, error } = await supabase
+      .from('email_events')
+      .select(
+        'id, tier, urgency, inquiry_type, received_at, status, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id'
+      )
+    if (error) {
+      setFetchError(error.message)
+    } else {
+      const sorted = sortQueue((data ?? []) as QueueRow[])
+      setQueue(sorted)
+      // Auto-select first item on initial load
+      if (!silent && sorted.length > 0) {
+        setSelectedId(sorted[0].id)
+      }
+      setFetchError(null)
+    }
+    if (!silent) setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchQueue()
+    const interval = setInterval(() => fetchQueue(true), 15_000)
+    return () => clearInterval(interval)
+  }, [fetchQueue])
+
+  // ── Derivations ──
+  // Centre panel still uses static placeholder until Gmail wiring
+  const selectedEmail = EMAILS.find((e) => e.id === selectedId) ?? EMAILS[0]
+
+  const filteredQueue =
+    activeFilter === 'All' ? queue : queue.filter((r) => r.tier === activeFilter)
+
+  const unreadCount = queue.filter((r) => !r.claimed_at).length
 
   const filters: FilterType[] = ['All', 'Emergency', 'STAT', 'Routine']
   const filterCounts: Record<FilterType, number> = {
-    All: EMAILS.length,
-    Emergency: EMAILS.filter((e) => e.tier === 'Emergency').length,
-    STAT: EMAILS.filter((e) => e.tier === 'STAT').length,
-    Routine: EMAILS.filter((e) => e.tier === 'Routine').length,
+    All: queue.length,
+    Emergency: queue.filter((r) => r.tier === 'Emergency').length,
+    STAT: queue.filter((r) => r.tier === 'STAT').length,
+    Routine: queue.filter((r) => r.tier === 'Routine').length,
   }
 
   const tierBarColor: Record<Tier, string> = {
     Emergency: 'var(--red)',
     STAT: 'var(--amber)',
     Routine: 'var(--teal)',
+  }
+
+  const urgencyColor: Record<string, string> = {
+    High: 'var(--red)',
+    Medium: 'var(--amber)',
+    Low: 'var(--teal)',
   }
 
   return (
@@ -342,15 +430,17 @@ export default function Page() {
                 <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>
                   Inbox queue
                 </span>
-                <span
-                  className="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
-                  style={{ backgroundColor: 'var(--teal)' }}
-                >
-                  {unreadCount}
-                </span>
+                {unreadCount > 0 && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                    style={{ backgroundColor: 'var(--teal)' }}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
               </div>
               <span className="text-xs" style={{ color: 'var(--gray-400)' }}>
-                {filteredEmails.length} message{filteredEmails.length !== 1 ? 's' : ''}
+                {loading ? 'Loading…' : `${filteredQueue.length} message${filteredQueue.length !== 1 ? 's' : ''}`}
               </span>
             </div>
 
@@ -380,73 +470,165 @@ export default function Page() {
 
             {/* Email list */}
             <div className="flex-1 overflow-y-auto">
-              {filteredEmails.map((email) => (
-                <button
-                  key={email.id}
-                  onClick={() => setSelectedId(email.id)}
-                  className="flex w-full cursor-pointer items-stretch border-b text-left transition-colors"
-                  style={{
-                    borderColor: 'var(--border)',
-                    backgroundColor:
-                      selectedId === email.id ? 'var(--teal-light)' : 'transparent',
-                  }}
-                >
-                  {/* Tier colour strip */}
-                  <div
-                    className="w-1 flex-shrink-0"
-                    style={{ backgroundColor: tierBarColor[email.tier] }}
-                  />
-
-                  {/* Content */}
-                  <div className="flex flex-1 flex-col gap-1 px-3 py-3">
-                    {/* Row 1: unread dot + badge + subject + time */}
-                    <div className="flex items-center gap-2">
-                      {email.unread ? (
-                        <span
-                          className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                          style={{ backgroundColor: 'var(--teal)' }}
-                        />
-                      ) : (
-                        <span className="h-1.5 w-1.5 flex-shrink-0" />
-                      )}
-                      <TierBadge tier={email.tier} />
-                      <span
-                        className="flex-1 truncate text-[13px]"
-                        style={{
-                          fontWeight: email.unread ? 600 : 400,
-                          color: 'var(--gray-900)',
-                        }}
-                      >
-                        {email.subject}
-                      </span>
-                      <span
-                        className="flex-shrink-0 text-[11px]"
-                        style={{ color: 'var(--gray-400)' }}
-                      >
-                        {email.timestamp}
-                      </span>
-                    </div>
-
-                    {/* Row 2: sender */}
+              {/* Loading skeleton */}
+              {loading && (
+                <div className="flex flex-col">
+                  {[...Array(5)].map((_, i) => (
                     <div
-                      className="flex items-center gap-1 pl-5 text-xs"
-                      style={{ color: 'var(--gray-600)' }}
+                      key={i}
+                      className="flex items-stretch border-b"
+                      style={{ borderColor: 'var(--border)' }}
                     >
-                      <span className="font-medium">{email.fromName}</span>
-                      <span style={{ color: 'var(--gray-400)' }}>·</span>
-                      <span style={{ color: 'var(--gray-400)' }}>{email.fromEmail}</span>
+                      <div
+                        className="w-1 flex-shrink-0"
+                        style={{ backgroundColor: 'var(--gray-100)' }}
+                      />
+                      <div className="flex flex-1 flex-col gap-2 px-3 py-3">
+                        <div
+                          className="h-3 w-3/4 animate-pulse rounded"
+                          style={{ backgroundColor: 'var(--gray-100)' }}
+                        />
+                        <div
+                          className="h-2.5 w-1/2 animate-pulse rounded"
+                          style={{ backgroundColor: 'var(--gray-100)' }}
+                        />
+                        <div
+                          className="h-2 w-5/6 animate-pulse rounded"
+                          style={{ backgroundColor: 'var(--gray-100)' }}
+                        />
+                      </div>
                     </div>
+                  ))}
+                </div>
+              )}
 
-                    {/* Row 3: preview */}
-                    <p
-                      className="truncate pl-5 text-[11px] leading-relaxed"
-                      style={{ color: 'var(--gray-400)' }}
+              {/* Error state */}
+              {!loading && fetchError && (
+                <div className="flex flex-col items-center gap-3 px-6 py-10">
+                  <span className="text-sm" style={{ color: 'var(--red)' }}>
+                    Could not load queue
+                  </span>
+                  <p className="text-center text-[11px]" style={{ color: 'var(--gray-400)' }}>
+                    {fetchError}
+                  </p>
+                  <button
+                    onClick={() => fetchQueue()}
+                    className="rounded-lg px-4 py-1.5 text-xs font-medium text-white"
+                    style={{ backgroundColor: 'var(--teal)' }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!loading && !fetchError && filteredQueue.length === 0 && (
+                <div className="flex flex-col items-center gap-2 px-6 py-10">
+                  <span className="text-sm font-medium" style={{ color: 'var(--gray-600)' }}>
+                    No messages
+                  </span>
+                  <p className="text-[11px]" style={{ color: 'var(--gray-400)' }}>
+                    {activeFilter === 'All' ? 'Inbox is empty.' : `No ${activeFilter} messages.`}
+                  </p>
+                </div>
+              )}
+
+              {/* Live queue rows */}
+              {!loading &&
+                !fetchError &&
+                filteredQueue.map((row) => {
+                  const isUnread = !row.claimed_at
+                  const ts = formatTimestamp(row.received_at)
+                  return (
+                    <button
+                      key={row.id}
+                      onClick={() => setSelectedId(row.id)}
+                      className="flex w-full cursor-pointer items-stretch border-b text-left transition-colors"
+                      style={{
+                        borderColor: 'var(--border)',
+                        backgroundColor:
+                          selectedId === row.id ? 'var(--teal-light)' : 'transparent',
+                      }}
                     >
-                      {email.preview}
-                    </p>
-                  </div>
-                </button>
-              ))}
+                      {/* Tier colour strip */}
+                      <div
+                        className="w-1 flex-shrink-0"
+                        style={{ backgroundColor: tierBarColor[row.tier] }}
+                      />
+
+                      {/* Content */}
+                      <div className="flex flex-1 flex-col gap-1 px-3 py-3">
+                        {/* Row 1: unread dot + tier badge + urgency + inquiry_type + time */}
+                        <div className="flex items-center gap-2">
+                          {isUnread ? (
+                            <span
+                              className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                              style={{ backgroundColor: 'var(--teal)' }}
+                            />
+                          ) : (
+                            <span className="h-1.5 w-1.5 flex-shrink-0" />
+                          )}
+                          <TierBadge tier={row.tier} />
+                          {row.urgency && (
+                            <span
+                              className="flex-shrink-0 text-[10px] font-semibold"
+                              style={{ color: urgencyColor[row.urgency] ?? 'var(--gray-400)' }}
+                            >
+                              {row.urgency}
+                            </span>
+                          )}
+                          <span
+                            className="flex-1 truncate text-[13px]"
+                            style={{
+                              fontWeight: isUnread ? 600 : 400,
+                              color: 'var(--gray-900)',
+                            }}
+                          >
+                            {row.inquiry_type}
+                          </span>
+                          <span
+                            className="flex-shrink-0 text-[11px]"
+                            style={{ color: 'var(--gray-400)' }}
+                          >
+                            {ts}
+                          </span>
+                        </div>
+
+                        {/* Row 2: status + assigned name */}
+                        <div
+                          className="flex items-center gap-1.5 pl-5 text-xs"
+                          style={{ color: 'var(--gray-400)' }}
+                        >
+                          <span
+                            className="capitalize"
+                            style={{
+                              color:
+                                row.status === 'unresolved' ? 'var(--red)' : 'var(--gray-400)',
+                            }}
+                          >
+                            {row.status}
+                          </span>
+                          {row.assigned_to_name && (
+                            <>
+                              <span>·</span>
+                              <span style={{ color: 'var(--gray-600)' }}>
+                                {row.assigned_to_name}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Row 3: inquiry_type as preview */}
+                        <p
+                          className="truncate pl-5 text-[11px] leading-relaxed"
+                          style={{ color: 'var(--gray-400)' }}
+                        >
+                          {row.inquiry_type}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
             </div>
           </div>
 
