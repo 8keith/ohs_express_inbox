@@ -41,10 +41,12 @@ interface EmailItem {
 
 const TIER_ORDER: Record<Tier, number> = { Emergency: 0, STAT: 1, Routine: 2 }
 
-function sortQueue(rows: QueueRow[]): QueueRow[] {
+function sortQueue(rows: QueueRow[], newestFirst: boolean): QueueRow[] {
   return [...rows].sort((a, b) => {
-    const t = TIER_ORDER[a.tier] - TIER_ORDER[b.tier]
-    if (t !== 0) return t
+    if (!newestFirst) {
+      const t = TIER_ORDER[a.tier] - TIER_ORDER[b.tier]
+      if (t !== 0) return t
+    }
     return new Date(b.received_at).getTime() - new Date(a.received_at).getTime()
   })
 }
@@ -273,6 +275,7 @@ export default function Page() {
   const [selectedId, setSelectedId] = useState<string>('1')
   const [draftText, setDraftText] = useState(DRAFT_TEXT)
   const [forwardTo, setForwardTo] = useState(FORWARD_OPTIONS[0])
+  const [newestFirst, setNewestFirst] = useState(true)
 
   // ── Queue state (live from Supabase) ──
   const [queue, setQueue] = useState<QueueRow[]>([])
@@ -289,11 +292,10 @@ export default function Page() {
     if (error) {
       setFetchError(error.message)
     } else {
-      const sorted = sortQueue((data ?? []) as QueueRow[])
-      setQueue(sorted)
-      // Auto-select first item on initial load
-      if (!silent && sorted.length > 0) {
-        setSelectedId(sorted[0].id)
+      const rows = (data ?? []) as QueueRow[]
+      setQueue(rows)
+      if (!silent && rows.length > 0) {
+        setSelectedId(sortQueue(rows, true)[0].id)
       }
       setFetchError(null)
     }
@@ -310,8 +312,9 @@ export default function Page() {
   // Centre panel still uses static placeholder until Gmail wiring
   const selectedEmail = EMAILS.find((e) => e.id === selectedId) ?? EMAILS[0]
 
+  const sortedQueue = sortQueue(queue, newestFirst)
   const filteredQueue =
-    activeFilter === 'All' ? queue : queue.filter((r) => r.tier === activeFilter)
+    activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.tier === activeFilter)
 
   const unreadCount = queue.filter((r) => !r.claimed_at).length
 
@@ -466,6 +469,18 @@ export default function Page() {
                   )}
                 </button>
               ))}
+              <div className="flex-1" />
+              <button
+                onClick={() => setNewestFirst((v) => !v)}
+                className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                style={
+                  newestFirst
+                    ? { backgroundColor: 'var(--teal)', color: 'white' }
+                    : { backgroundColor: 'var(--gray-100)', color: 'var(--gray-600)' }
+                }
+              >
+                Newest first
+              </button>
             </div>
 
             {/* Email list */}
