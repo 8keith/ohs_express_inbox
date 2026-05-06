@@ -371,8 +371,9 @@ export default function Page() {
         body: JSON.stringify({ subject: email.subject, from: email.from, body: email.body }),
       })
       if (!res.ok) throw new Error('failed')
-      const { draft } = await res.json()
-      setDraftText(draft)
+      const data = await res.json()
+      console.log('[generateDraft] response from /api/draft:', data)
+      setDraftText(data.draft)
     } catch {
       setDraftText('')
     } finally {

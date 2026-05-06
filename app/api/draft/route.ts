@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const { subject, from, body } = await request.json()
 
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 300,
       system: SYSTEM_PROMPT,
       messages: [
@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
       ],
     })
 
+    console.log('[draft] Anthropic response:', JSON.stringify(message, null, 2))
     const draft = message.content[0].type === 'text' ? message.content[0].text : ''
+    console.log('[draft] returning draft:', draft)
     return NextResponse.json({ draft })
   } catch (err) {
     console.error('[draft]', err)
