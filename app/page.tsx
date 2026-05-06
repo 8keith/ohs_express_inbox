@@ -377,6 +377,8 @@ export default function Page() {
   const [draftLoading, setDraftLoading] = useState(false)
   const [draftMode, setDraftMode] = useState<'choice' | 'editing'>('choice')
   const draftMapRef = useRef<Map<string, string>>(new Map())
+  const seenIdsRef = useRef<Set<string>>(new Set())
+  const [newIds, setNewIds] = useState<Set<string>>(new Set())
   const [sending, setSending] = useState(false)
   const [sendStatus, setSendStatus] = useState<'success' | 'error' | null>(null)
   const [showSignature, setShowSignature] = useState(false)
@@ -466,6 +468,18 @@ export default function Page() {
     const interval = setInterval(() => fetchQueue(true), 15_000)
     return () => clearInterval(interval)
   }, [fetchQueue])
+
+  useEffect(() => {
+    const fresh = new Set<string>()
+    queue.forEach(r => {
+      if (!seenIdsRef.current.has(r.id)) fresh.add(r.id)
+    })
+    queue.forEach(r => seenIdsRef.current.add(r.id))
+    if (fresh.size === 0) return
+    setNewIds(fresh)
+    const t = setTimeout(() => setNewIds(new Set()), 350)
+    return () => clearTimeout(t)
+  }, [queue])
 
   // ── Derivations ──
   // Centre panel still uses static placeholder until Gmail wiring
@@ -803,7 +817,7 @@ export default function Page() {
                     <button
                       key={row.id}
                       onClick={() => { setSelectedId(row.id); fetchEmailForRow(row) }}
-                      className="flex w-full cursor-pointer items-start gap-3 text-left transition-colors"
+                      className={`flex w-full cursor-pointer items-start gap-3 text-left transition-colors${newIds.has(row.id) ? ' card-in' : ''}`}
                       style={cardStyle}
                     >
                       {/* Avatar */}
