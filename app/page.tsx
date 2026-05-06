@@ -1051,8 +1051,9 @@ export default function Page() {
                   Draft reply
                 </span>
                 <span
-                  className="flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium"
+                  className="flex items-center gap-1.5 rounded-md text-xs font-medium"
                   style={{
+                    padding: '0.3rem 0.8rem',
                     backgroundColor: 'var(--amber-light)',
                     color: 'var(--amber)',
                   }}
@@ -1140,7 +1141,7 @@ export default function Page() {
           </div>
 
           {/* ── RIGHT: TRIAGE PANEL ───────────────────────────────────── */}
-          <div className="flex flex-shrink flex-col" style={{ minWidth: '300px', maxWidth: '440px', flexBasis: '440px' }}>
+          <div className="flex flex-shrink flex-col" style={{ minWidth: '300px', maxWidth: '440px', flexBasis: '440px', backgroundColor: 'var(--gray-50)' }}>
             {/* Panel header */}
             <div
               className="flex flex-shrink-0 items-center border-b px-4 py-3"
@@ -1333,8 +1334,8 @@ export default function Page() {
                   ))}
                 </select>
                 <button
-                  className="mt-2.5 w-full rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: 'var(--teal)' }}
+                  className="mt-2.5 w-full rounded-lg py-2 text-sm font-medium transition-colors"
+                  style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #4ade80' }}
                 >
                   Forward to {forwardTo}
                 </button>
