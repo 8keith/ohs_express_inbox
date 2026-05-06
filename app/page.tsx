@@ -1145,7 +1145,7 @@ export default function Page() {
             {/* Panel header */}
             <div
               className="flex flex-shrink-0 items-center border-b px-4 py-3"
-              style={{ borderColor: 'var(--border)' }}
+              style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
             >
               <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>
                 OHS triage panel
@@ -1158,7 +1158,7 @@ export default function Page() {
               {/* Status card */}
               <div
                 className="rounded-lg border p-3.5"
-                style={{ borderColor: 'var(--border)' }}
+                style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
               >
                 <p
                   className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider"
@@ -1213,7 +1213,7 @@ export default function Page() {
               {/* Classification card */}
               <div
                 className="rounded-lg border p-3.5"
-                style={{ borderColor: 'var(--border)' }}
+                style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
               >
                 <div className="mb-3 flex items-center justify-between">
                   <p
@@ -1308,7 +1308,7 @@ export default function Page() {
               {/* Forward-to card */}
               <div
                 className="rounded-lg border p-3.5"
-                style={{ borderColor: 'var(--border)' }}
+                style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
               >
                 <p
                   className="mb-3 text-[11px] font-semibold uppercase tracking-wider"
