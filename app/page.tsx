@@ -16,6 +16,7 @@ interface QueueRow {
   inquiry_type: string
   received_at: string
   status: string
+  assigned_to: string | null
   assigned_to_name: string | null
   claimed_at: string | null
   claim_expires_at: string | null
@@ -58,11 +59,9 @@ const TIER_ORDER: Record<Tier, number> = {
 
 function sortQueue(rows: QueueRow[], newestFirst: boolean): QueueRow[] {
   return [...rows].sort((a, b) => {
-    if (!newestFirst) {
-      const t = TIER_ORDER[a.tier] - TIER_ORDER[b.tier]
-      if (t !== 0) return t
-    }
-    return new Date(b.received_at).getTime() - new Date(a.received_at).getTime()
+    const aTime = new Date(a.received_at).getTime()
+    const bTime = new Date(b.received_at).getTime()
+    return newestFirst ? bTime - aTime : aTime - bTime
   })
 }
 
@@ -106,6 +105,17 @@ function splitBody(body: string): { main: string; signature: string | null } {
     }
   }
   return { main: body, signature: null }
+}
+
+function isClaimed(row: QueueRow): boolean {
+  if (!row.assigned_to || !row.claim_expires_at) return false
+  return new Date(row.claim_expires_at) > new Date()
+}
+
+function claimDuration(tier: string): number {
+  if (tier === 'Emergency') return 3
+  if (tier === 'STAT') return 5
+  return 10
 }
 
 function formatTimestamp(iso: string): string {
@@ -398,6 +408,8 @@ export default function Page() {
   const [showSignature, setShowSignature] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastFading, setToastFading] = useState(false)
+  const [conflictRow, setConflictRow] = useState<QueueRow | null>(null)
+  const [pendingAction, setPendingAction] = useState<'draft' | 'manual' | null>(null)
 
   const generateDraft = useCallback(async (email: LiveEmail, rowId: string) => {
     setDraftLoading(true)
@@ -460,7 +472,7 @@ export default function Page() {
     const { data, error } = await supabase
       .from('email_events')
       .select(
-        'id, tier, urgency, inquiry_type, subject, sender, received_at, status, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id'
+        'id, tier, urgency, inquiry_type, subject, sender, received_at, status, assigned_to, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id'
       )
     if (error) {
       setFetchError(error.message)
@@ -509,6 +521,61 @@ export default function Page() {
   })
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
 
+  // ── Claim helpers ──
+  const CURRENT_USER = 'keith_agnew'
+  const CURRENT_USER_NAME = 'Keith Agnew'
+
+  async function claimRow(row: QueueRow): Promise<boolean> {
+    const now = new Date()
+    const expires = new Date(now.getTime() + claimDuration(row.tier) * 60 * 1000)
+    const { error } = await supabase.from('email_events').update({
+      assigned_to: CURRENT_USER,
+      assigned_to_name: CURRENT_USER_NAME,
+      claimed_at: now.toISOString(),
+      claim_expires_at: expires.toISOString(),
+    }).eq('id', row.id)
+    if (error) return false
+    setQueue(prev => prev.map(r => r.id === row.id
+      ? { ...r, assigned_to: CURRENT_USER, assigned_to_name: CURRENT_USER_NAME, claimed_at: now.toISOString(), claim_expires_at: expires.toISOString() }
+      : r
+    ))
+    return true
+  }
+
+  async function checkAndClaim(action: 'draft' | 'manual') {
+    if (!selectedQueueRow) return
+    const row = selectedQueueRow
+    if (isClaimed(row) && row.assigned_to !== CURRENT_USER) {
+      setPendingAction(action)
+      setConflictRow(row)
+      return
+    }
+    await claimRow(row)
+    if (action === 'draft' && liveEmail) {
+      generateDraft(liveEmail, row.id)
+    } else if (action === 'manual') {
+      draftMapRef.current.set(row.id, '')
+      setDraftText('')
+      setDraftMode('editing')
+    }
+  }
+
+  async function handleTakeOver() {
+    if (!conflictRow || !pendingAction) return
+    const row = conflictRow
+    const action = pendingAction
+    setConflictRow(null)
+    setPendingAction(null)
+    await claimRow(row)
+    if (action === 'draft' && liveEmail) {
+      generateDraft(liveEmail, row.id)
+    } else if (action === 'manual') {
+      draftMapRef.current.set(row.id, '')
+      setDraftText('')
+      setDraftMode('editing')
+    }
+  }
+
   // ── Draft mode handlers ──
   function handleWriteManually() {
     if (!selectedQueueRow) return
@@ -540,7 +607,8 @@ export default function Page() {
 
       const sentId = selectedQueueRow.id
       const currentIdx = filteredQueue.findIndex((r) => r.id === sentId)
-      const nextRow = filteredQueue[currentIdx + 1] ?? filteredQueue[currentIdx - 1] ?? null
+      const remaining = filteredQueue.filter((r) => r.id !== sentId)
+      const nextRow = remaining.find((r) => !isClaimed(r) || r.assigned_to === CURRENT_USER) ?? null
 
       // Start card fade-out and toast simultaneously
       setLeavingId(sentId)
@@ -738,7 +806,7 @@ export default function Page() {
                 className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
                 style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #4ade80' }}
               >
-                Newest first
+                {newestFirst ? 'Newest first' : 'Earliest first'}
               </button>
             </div>
 
@@ -872,12 +940,21 @@ export default function Page() {
                           {row.urgency && <UrgencyBadge urgency={row.urgency} />}
                           <div className="flex-1" />
                           {(row.status === 'new' || row.status === 'unresolved') && (
-                            <span
-                              className="font-medium"
-                              style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #4ade80', fontSize: '11px', padding: '4px 10px', borderRadius: '4px' }}
-                            >
-                              New
-                            </span>
+                            isClaimed(row) ? (
+                              <span
+                                className="font-medium"
+                                style={{ backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fbbf24', fontSize: '11px', padding: '4px 10px', borderRadius: '4px' }}
+                              >
+                                Claimed · {getInitials(row.assigned_to_name)}
+                              </span>
+                            ) : (
+                              <span
+                                className="font-medium"
+                                style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #4ade80', fontSize: '11px', padding: '4px 10px', borderRadius: '4px' }}
+                              >
+                                New
+                              </span>
+                            )
                           )}
                           {row.status === 'resolved' && (
                             <span className="font-medium" style={{ color: '#2563EB', fontSize: '11px' }}>Resolved</span>
@@ -1067,7 +1144,7 @@ export default function Page() {
               {draftMode === 'choice' ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3">
                   <button
-                    onClick={() => liveEmail && selectedQueueRow && generateDraft(liveEmail, selectedQueueRow.id)}
+                    onClick={() => checkAndClaim('draft')}
                     disabled={!liveEmail}
                     className="rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                     style={{ backgroundColor: 'var(--teal)' }}
@@ -1075,7 +1152,7 @@ export default function Page() {
                     Generate AI Draft
                   </button>
                   <button
-                    onClick={handleWriteManually}
+                    onClick={() => checkAndClaim('manual')}
                     className="rounded-lg border px-5 py-2.5 text-sm font-medium transition-colors"
                     style={{ borderColor: 'var(--border)', color: 'var(--gray-600)', backgroundColor: 'white' }}
                   >
@@ -1395,6 +1472,39 @@ export default function Page() {
           </nav>
         </footer>
       </div>
+
+      {/* ── CONFLICT MODAL ───────────────────────────────────────────── */}
+      {conflictRow && (
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60 }}
+        >
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <p className="mb-1 text-sm font-semibold" style={{ color: 'var(--gray-900)' }}>
+              {conflictRow.assigned_to_name} is working on this
+            </p>
+            <p className="mb-5 text-sm" style={{ color: 'var(--gray-600)' }}>
+              Claimed {Math.round((Date.now() - new Date(conflictRow.claimed_at!).getTime()) / 60000)} minute{Math.round((Date.now() - new Date(conflictRow.claimed_at!).getTime()) / 60000) !== 1 ? 's' : ''} ago. Take over?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleTakeOver}
+                className="flex-1 rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: 'var(--teal)' }}
+              >
+                Take over
+              </button>
+              <button
+                onClick={() => { setConflictRow(null); setPendingAction(null) }}
+                className="flex-1 rounded-lg border py-2 text-sm font-medium transition-colors"
+                style={{ borderColor: 'var(--border)', color: 'var(--gray-600)', backgroundColor: 'white' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── SEND TOAST ───────────────────────────────────────────────── */}
       {toastVisible && (
