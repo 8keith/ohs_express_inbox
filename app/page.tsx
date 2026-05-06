@@ -1333,7 +1333,7 @@ export default function Page() {
                       color: 'var(--teal-dark)',
                     }}
                   >
-                    AI · Claude
+                    OHS Intelligence
                   </span>
                 </div>
 
@@ -1342,18 +1342,13 @@ export default function Page() {
                     <span className="text-sm" style={{ color: 'var(--gray-600)' }}>
                       Tier
                     </span>
-                    <TierBadge tier="Emergency" />
+                    <TierBadge tier={selectedQueueRow?.tier ?? 'Routine'} />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm" style={{ color: 'var(--gray-600)' }}>
                       Urgency
                     </span>
-                    <span
-                      className="text-sm font-semibold"
-                      style={{ color: 'var(--red)' }}
-                    >
-                      High
-                    </span>
+                    <UrgencyBadge urgency={selectedQueueRow?.urgency ?? ''} />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm" style={{ color: 'var(--gray-600)' }}>
@@ -1363,7 +1358,7 @@ export default function Page() {
                       className="text-right text-sm font-medium"
                       style={{ color: 'var(--gray-900)' }}
                     >
-                      Urgent Medical Concern
+                      {selectedQueueRow?.inquiry_type ?? '—'}
                     </span>
                   </div>
                 </div>
