@@ -299,7 +299,7 @@ function TierBadge({ tier }: { tier: string }) {
   return (
     <span
       className="inline-flex flex-shrink-0 items-center rounded font-mono text-[10px] font-semibold tracking-wide"
-      style={{ ...s, padding: '5px 12px' }}
+      style={{ ...s, padding: '4px 14px' }}
     >
       {TIER_LABELS[tier] ?? tier}
     </span>
@@ -320,7 +320,7 @@ function UrgencyBadge({ urgency }: { urgency: string }) {
     return (
       <span
         className="inline-flex flex-shrink-0 items-center rounded text-[10px] font-semibold tracking-wide"
-        style={{ backgroundColor: '#E24B4A', color: 'white', padding: '5px 12px' }}
+        style={{ backgroundColor: '#E24B4A', color: 'white', padding: '4px 14px' }}
       >
         Emergency
       </span>
@@ -330,7 +330,7 @@ function UrgencyBadge({ urgency }: { urgency: string }) {
   return (
     <span
       className="inline-flex flex-shrink-0 items-center gap-1 rounded text-[10px] font-semibold tracking-wide"
-      style={{ backgroundColor: c.bg, color: c.text, padding: '5px 12px' }}
+      style={{ backgroundColor: c.bg, color: c.text, padding: '4px 14px' }}
     >
       <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: c.dot }} />
       {urgency}
@@ -416,7 +416,7 @@ export default function Page() {
 
   const sortedQueue = sortQueue(queue, newestFirst)
   const filteredQueue = (
-    activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.tier === activeFilter)
+    activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.urgency === activeFilter)
   ).filter((r) => r.inquiry_type !== 'no_content' && r.status !== 'no_content')
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
 
@@ -425,9 +425,9 @@ export default function Page() {
   const filters: FilterType[] = ['All', 'Emergency', 'STAT', 'Routine']
   const filterCounts: Record<string, number> = {
     All: queue.length,
-    Emergency: queue.filter((r) => r.tier === 'Emergency').length,
-    STAT: queue.filter((r) => r.tier === 'STAT').length,
-    Routine: queue.filter((r) => r.tier === 'Routine').length,
+    Emergency: queue.filter((r) => r.urgency === 'Emergency').length,
+    STAT: queue.filter((r) => r.urgency === 'STAT').length,
+    Routine: queue.filter((r) => r.urgency === 'Routine').length,
   }
 
   const avatarStyle: Record<string, { backgroundColor: string; color: string }> = {
@@ -525,13 +525,13 @@ export default function Page() {
 
           {/* ── LEFT: INBOX QUEUE ─────────────────────────────────────── */}
           <div
-            className="flex w-[680px] flex-none flex-col border-r"
+            className="flex w-[560px] flex-none flex-col border-r"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
           >
             {/* Queue header */}
             <div
-              className="flex flex-shrink-0 items-center justify-between border-b px-4 py-3"
-              style={{ borderColor: 'var(--border)' }}
+              className="flex h-14 flex-shrink-0 items-center justify-between border-b px-4"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
             >
               <div className="flex items-center gap-2">
                 <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>
@@ -563,8 +563,8 @@ export default function Page() {
                   className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
                   style={
                     activeFilter === f
-                      ? { backgroundColor: 'var(--teal)', color: 'white' }
-                      : { backgroundColor: 'var(--gray-100)', color: 'var(--gray-600)' }
+                      ? { backgroundColor: 'var(--teal)', color: 'white', border: '1px solid var(--teal)' }
+                      : { backgroundColor: 'white', border: '1px solid var(--border)', color: 'var(--gray-600)' }
                   }
                 >
                   {f}
@@ -579,8 +579,8 @@ export default function Page() {
                 className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
                 style={
                   newestFirst
-                    ? { backgroundColor: 'var(--teal)', color: 'white' }
-                    : { backgroundColor: 'var(--gray-100)', color: 'var(--gray-600)' }
+                    ? { backgroundColor: 'var(--teal)', color: 'white', border: '1px solid var(--teal)' }
+                    : { backgroundColor: 'white', border: '1px solid var(--border)', color: 'var(--gray-600)' }
                 }
               >
                 Newest first
@@ -653,7 +653,10 @@ export default function Page() {
                   const initials = getInitials(displayName)
                   const preview = row.subject || row.inquiry_type
 
-                  const isEmergency = row.tier === 'Emergency' || row.tier === 'T1'
+                  const accentBorder =
+                    row.urgency === 'Emergency' ? '5px solid #E24B4A' :
+                    row.urgency === 'STAT'      ? '5px solid #EF9F27' :
+                    undefined
                   const cardStyle: React.CSSProperties = isSelected
                     ? {
                         backgroundColor: 'var(--teal-light)',
@@ -661,17 +664,10 @@ export default function Page() {
                         borderRadius: '8px',
                         padding: '14px 16px',
                       }
-                    : isEmergency
-                    ? {
-                        backgroundColor: 'white',
-                        border: '1px solid var(--border)',
-                        borderLeft: '3px solid var(--red)',
-                        borderRadius: '8px',
-                        padding: '14px 16px',
-                      }
                     : {
                         backgroundColor: 'white',
                         border: '1px solid var(--border)',
+                        ...(accentBorder ? { borderLeft: accentBorder } : {}),
                         borderRadius: '8px',
                         padding: '14px 16px',
                       }
