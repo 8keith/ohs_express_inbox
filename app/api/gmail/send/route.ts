@@ -7,7 +7,9 @@ function rfc2047(value: string): string {
 
 function buildRawEmail(to: string, subject: string, body: string): string {
   const rawSubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`
+  const fromAddress = process.env.GMAIL_DEMO_INBOX ?? 'hello@ohsdemo.com'
   const email = [
+    `From: OHS Care Team <${fromAddress}>`,
     `To: ${to}`,
     `Subject: ${rfc2047(rawSubject)}`,
     'Content-Type: text/plain; charset=utf-8',

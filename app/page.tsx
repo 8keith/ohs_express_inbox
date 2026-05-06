@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -360,11 +360,14 @@ export default function Page() {
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [draftLoading, setDraftLoading] = useState(false)
+  const [draftMode, setDraftMode] = useState<'choice' | 'editing'>('choice')
+  const draftMapRef = useRef<Map<string, string>>(new Map())
   const [sending, setSending] = useState(false)
   const [sendStatus, setSendStatus] = useState<'success' | 'error' | null>(null)
 
-  const generateDraft = useCallback(async (email: LiveEmail) => {
+  const generateDraft = useCallback(async (email: LiveEmail, rowId: string) => {
     setDraftLoading(true)
+    setDraftMode('editing')
     setDraftText('Generating draft…')
     try {
       const res = await fetch('/api/draft', {
@@ -375,6 +378,7 @@ export default function Page() {
       if (!res.ok) throw new Error('failed')
       const data = await res.json()
       console.log('[generateDraft] response from /api/draft:', data)
+      draftMapRef.current.set(rowId, data.draft)
       setDraftText(data.draft)
     } catch {
       setDraftText('')
@@ -389,7 +393,17 @@ export default function Page() {
       setLiveEmail(null)
       setEmailLoading(false)
       setEmailError(null)
+      setDraftMode('choice')
+      setDraftText('')
       return
+    }
+    // Restore existing draft if one was already written for this row
+    if (draftMapRef.current.has(row.id)) {
+      setDraftText(draftMapRef.current.get(row.id)!)
+      setDraftMode('editing')
+    } else {
+      setDraftMode('choice')
+      setDraftText('')
     }
     setEmailLoading(true)
     setLiveEmail(null)
@@ -399,13 +413,12 @@ export default function Page() {
       if (!res.ok) throw new Error('fetch failed')
       const email = await res.json()
       setLiveEmail(email)
-      generateDraft(email)
     } catch {
       setEmailError('Could not load email')
     } finally {
       setEmailLoading(false)
     }
-  }, [generateDraft])
+  }, [])
 
   const fetchQueue = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -444,6 +457,14 @@ export default function Page() {
     activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.urgency === activeFilter)
   ).filter((r) => r.inquiry_type !== 'no_content' && r.status !== 'no_content')
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
+
+  // ── Draft mode handlers ──
+  function handleWriteManually() {
+    if (!selectedQueueRow) return
+    draftMapRef.current.set(selectedQueueRow.id, '')
+    setDraftText('')
+    setDraftMode('editing')
+  }
 
   // ── Send handler ──
   async function handleSend() {
@@ -781,10 +802,15 @@ export default function Page() {
                           {row.urgency && <UrgencyBadge urgency={row.urgency} />}
                           <div className="flex-1" />
                           {(row.status === 'new' || row.status === 'unresolved') && (
-                            <span className="text-[11px] font-medium" style={{ color: 'var(--teal)' }}>New</span>
+                            <span
+                              className="font-medium"
+                              style={{ backgroundColor: '#1D9E75', color: 'white', fontSize: '11px', padding: '4px 10px', borderRadius: '4px' }}
+                            >
+                              New
+                            </span>
                           )}
                           {row.status === 'resolved' && (
-                            <span className="text-[11px] font-medium" style={{ color: '#16a34a' }}>Resolved</span>
+                            <span className="font-medium" style={{ color: '#16a34a', fontSize: '11px' }}>Resolved</span>
                           )}
                         </div>
                       </div>
@@ -942,31 +968,54 @@ export default function Page() {
                   AI draft — review before sending
                 </span>
               </div>
-              <textarea
-                className="w-full flex-1 resize-none rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
-                style={{
-                  borderColor: 'var(--border)',
-                  color: draftLoading ? 'var(--gray-400)' : 'var(--gray-900)',
-                  backgroundColor: 'white',
-                  fontFamily: 'var(--font-dm-sans), sans-serif',
-                  lineHeight: '1.6',
-                }}
-                value={draftText}
-                onChange={(e) => setDraftText(e.target.value)}
-                disabled={draftLoading}
-              />
+              {draftMode === 'choice' ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3">
+                  <button
+                    onClick={() => liveEmail && selectedQueueRow && generateDraft(liveEmail, selectedQueueRow.id)}
+                    disabled={!liveEmail}
+                    className="rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                    style={{ backgroundColor: 'var(--teal)' }}
+                  >
+                    Generate AI Draft
+                  </button>
+                  <button
+                    onClick={handleWriteManually}
+                    className="rounded-lg border px-5 py-2.5 text-sm font-medium transition-colors"
+                    style={{ borderColor: 'var(--border)', color: 'var(--gray-600)', backgroundColor: 'white' }}
+                  >
+                    Write manually
+                  </button>
+                </div>
+              ) : (
+                <textarea
+                  className="w-full flex-1 resize-none rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+                  style={{
+                    borderColor: 'var(--border)',
+                    color: draftLoading ? 'var(--gray-400)' : 'var(--gray-900)',
+                    backgroundColor: 'white',
+                    fontFamily: 'var(--font-dm-sans), sans-serif',
+                    lineHeight: '1.6',
+                  }}
+                  value={draftText}
+                  onChange={(e) => {
+                    setDraftText(e.target.value)
+                    if (selectedQueueRow) draftMapRef.current.set(selectedQueueRow.id, e.target.value)
+                  }}
+                  disabled={draftLoading}
+                />
+              )}
               <div className="mt-3 flex flex-shrink-0 items-center gap-2">
                 <button
                   onClick={handleSend}
-                  disabled={sending || !liveEmail || draftLoading}
+                  disabled={sending || !liveEmail || draftLoading || draftMode === 'choice'}
                   className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-40"
                   style={{ backgroundColor: 'var(--teal)' }}
                 >
                   {sending ? 'Sending…' : 'Send'}
                 </button>
                 <button
-                  onClick={() => liveEmail && generateDraft(liveEmail)}
-                  disabled={draftLoading || !liveEmail}
+                  onClick={() => liveEmail && selectedQueueRow && generateDraft(liveEmail, selectedQueueRow.id)}
+                  disabled={draftLoading || !liveEmail || draftMode === 'choice'}
                   className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-40"
                   style={{
                     borderColor: 'var(--border)',
