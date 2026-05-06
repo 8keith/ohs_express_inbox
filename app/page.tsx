@@ -22,6 +22,7 @@ interface QueueRow {
   gmail_message_id: string | null
   gmail_thread_id: string | null
   subject: string | null
+  sender: string | null
 }
 
 // Kept for the centre panel (static until Gmail wiring)
@@ -296,6 +297,7 @@ export default function Page() {
   const [emailError, setEmailError] = useState<string | null>(null)
 
   const fetchEmailForRow = useCallback(async (row: QueueRow) => {
+    console.log('[fetchEmailForRow] gmail_message_id:', row.gmail_message_id)
     if (!row.gmail_message_id) {
       setLiveEmail(null)
       setEmailLoading(false)
@@ -321,7 +323,7 @@ export default function Page() {
     const { data, error } = await supabase
       .from('email_events')
       .select(
-        'id, tier, urgency, inquiry_type, subject, received_at, status, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id'
+        'id, tier, urgency, inquiry_type, subject, sender, received_at, status, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id'
       )
     if (error) {
       setFetchError(error.message)
@@ -646,6 +648,16 @@ export default function Page() {
                           </span>
                         </div>
 
+                        {/* Sender name */}
+                        {row.sender && (
+                          <p
+                            className="truncate pl-5 text-[12px] font-medium"
+                            style={{ color: 'var(--gray-500)' }}
+                          >
+                            {row.sender}
+                          </p>
+                        )}
+
                         {/* Row 2: status + assigned name */}
                         <div
                           className="flex items-center gap-1.5 pl-5 text-xs"
@@ -670,12 +682,12 @@ export default function Page() {
                           )}
                         </div>
 
-                        {/* Row 3: inquiry_type as preview */}
+                        {/* Row 3: preview */}
                         <p
                           className="truncate pl-5 text-[11px] leading-relaxed"
                           style={{ color: 'var(--gray-400)' }}
                         >
-                          {row.inquiry_type}
+                          {row.sender || row.inquiry_type}
                         </p>
                       </div>
                     </button>
