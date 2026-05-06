@@ -360,6 +360,8 @@ export default function Page() {
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [draftLoading, setDraftLoading] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sendStatus, setSendStatus] = useState<'success' | 'error' | null>(null)
 
   const generateDraft = useCallback(async (email: LiveEmail) => {
     setDraftLoading(true)
@@ -442,6 +444,46 @@ export default function Page() {
     activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.urgency === activeFilter)
   ).filter((r) => r.inquiry_type !== 'no_content' && r.status !== 'no_content')
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
+
+  // ── Send handler ──
+  async function handleSend() {
+    if (!selectedQueueRow || !liveEmail || sending) return
+    setSending(true)
+    setSendStatus(null)
+    try {
+      const res = await fetch('/api/gmail/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageId: selectedQueueRow.gmail_message_id,
+          threadId: selectedQueueRow.gmail_thread_id,
+          to: liveEmail.from,
+          subject: liveEmail.subject,
+          body: draftText,
+        }),
+      })
+      if (!res.ok) throw new Error('Send failed')
+
+      await supabase.from('email_events').update({ status: 'resolved' }).eq('id', selectedQueueRow.id)
+
+      setSendStatus('success')
+
+      // Auto-select next item in the filtered queue after a brief pause
+      const currentIdx = filteredQueue.findIndex((r) => r.id === selectedQueueRow.id)
+      const nextRow = filteredQueue[currentIdx + 1] ?? filteredQueue[currentIdx - 1] ?? null
+      setTimeout(() => {
+        setSendStatus(null)
+        if (nextRow) {
+          setSelectedId(nextRow.id)
+          fetchEmailForRow(nextRow)
+        }
+      }, 1500)
+    } catch {
+      setSendStatus('error')
+    } finally {
+      setSending(false)
+    }
+  }
 
   const unreadCount = queue.filter((r) => !r.claimed_at).length
 
@@ -908,10 +950,12 @@ export default function Page() {
               />
               <div className="mt-3 flex flex-shrink-0 items-center gap-2">
                 <button
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 active:opacity-80"
+                  onClick={handleSend}
+                  disabled={sending || !liveEmail || draftLoading}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-40"
                   style={{ backgroundColor: 'var(--teal)' }}
                 >
-                  Send
+                  {sending ? 'Sending…' : 'Send'}
                 </button>
                 <button
                   onClick={() => liveEmail && generateDraft(liveEmail)}
@@ -935,6 +979,16 @@ export default function Page() {
                 >
                   Forward
                 </button>
+                {sendStatus === 'success' && (
+                  <span className="text-xs font-medium" style={{ color: 'var(--teal)' }}>
+                    Sent ✓
+                  </span>
+                )}
+                {sendStatus === 'error' && (
+                  <span className="text-xs font-medium" style={{ color: 'var(--red)' }}>
+                    Failed to send — please try again
+                  </span>
+                )}
               </div>
             </div>
           </div>
