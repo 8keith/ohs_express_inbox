@@ -549,12 +549,12 @@ export default function Page() {
       }, 250)
 
       // Toast fades out independently
-      setTimeout(() => setToastFading(true), 2000)
+      setTimeout(() => setToastFading(true), 1500)
       setTimeout(() => {
         setSendStatus(null)
         setToastVisible(false)
         setToastFading(false)
-      }, 2500)
+      }, 2000)
     } catch {
       setSendStatus('error')
     } finally {
