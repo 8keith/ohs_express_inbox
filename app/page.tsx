@@ -80,6 +80,19 @@ function getInitials(name: string | null): string {
     : name.slice(0, 2).toUpperCase()
 }
 
+function stripSubjectPrefix(subject: string): string {
+  return subject.replace(/^(re|fwd?):\s*/i, '').trim()
+}
+
+function formatEmailDate(raw: string): string {
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return raw
+  const day = d.toLocaleDateString('en-US', { weekday: 'short' })
+  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return `${day}, ${date} · ${time}`
+}
+
 function splitBody(body: string): { main: string; signature: string | null } {
   const lines = body.split('\n')
   for (let i = 0; i < lines.length; i++) {
@@ -797,7 +810,7 @@ export default function Page() {
                   const ts = formatTimestamp(row.received_at)
                   const displayName = stripDisplayName(row.sender)
                   const initials = getInitials(displayName)
-                  const preview = row.subject || row.inquiry_type
+                  const preview = stripSubjectPrefix(row.subject || row.inquiry_type)
 
                   const accentBorder =
                     row.urgency === 'Emergency' ? '5px solid #E24B4A' :
@@ -907,7 +920,7 @@ export default function Page() {
                         className="text-[15px] font-semibold leading-snug"
                         style={{ color: 'var(--gray-900)' }}
                       >
-                        {liveEmail.subject}
+                        {stripSubjectPrefix(liveEmail.subject)}
                       </h2>
                     </div>
                     <div
@@ -920,10 +933,10 @@ export default function Page() {
                       </span>
                       <span>
                         <span style={{ color: 'var(--gray-400)' }}>To: </span>
-                        <span style={{ color: 'var(--teal)' }}>{liveEmail.to}</span>
+                        <span style={{ color: 'var(--teal)' }}>OHS Care Team &lt;hello@ohsdemo.com&gt;</span>
                       </span>
                       <span className="ml-auto" style={{ color: 'var(--gray-400)' }}>
-                        {liveEmail.date}
+                        {formatEmailDate(liveEmail.date)}
                       </span>
                     </div>
                   </>
