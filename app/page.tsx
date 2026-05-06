@@ -361,7 +361,7 @@ function Divider() {
 
 export default function Page() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('All')
-  const [selectedId, setSelectedId] = useState<string>('1')
+  const [selectedId, setSelectedId] = useState<string | null>('1')
   const [draftText, setDraftText] = useState(DRAFT_TEXT)
   const [forwardTo, setForwardTo] = useState(FORWARD_OPTIONS[0])
   const [newestFirst, setNewestFirst] = useState(true)
