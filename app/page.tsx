@@ -736,11 +736,7 @@ export default function Page() {
               <button
                 onClick={() => setNewestFirst((v) => !v)}
                 className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-                style={
-                  newestFirst
-                    ? { backgroundColor: 'var(--teal)', color: 'white', border: '1px solid var(--teal)' }
-                    : { backgroundColor: 'white', border: '1px solid var(--border)', color: 'var(--gray-600)' }
-                }
+                style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #4ade80' }}
               >
                 Newest first
               </button>
@@ -878,7 +874,7 @@ export default function Page() {
                           {(row.status === 'new' || row.status === 'unresolved') && (
                             <span
                               className="font-medium"
-                              style={{ backgroundColor: '#1D9E75', color: 'white', fontSize: '11px', padding: '4px 10px', borderRadius: '4px' }}
+                              style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #4ade80', fontSize: '11px', padding: '4px 10px', borderRadius: '4px' }}
                             >
                               New
                             </span>
