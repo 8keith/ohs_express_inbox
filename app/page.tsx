@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type Tier = 'Emergency' | 'STAT' | 'Routine'
+type Tier = 'Emergency' | 'STAT' | 'Routine' | 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6'
 type FilterType = 'All' | Tier
 
 // Shape returned from Supabase email_events table
@@ -49,7 +49,12 @@ interface LiveEmail {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const TIER_ORDER: Record<Tier, number> = { Emergency: 0, STAT: 1, Routine: 2 }
+const TIER_ORDER: Record<Tier, number> = {
+  Emergency: 0, T1: 0,
+  STAT: 1,      T2: 1,
+  Routine: 2,   T3: 2,
+  T4: 3, T5: 4, T6: 5,
+}
 
 function sortQueue(rows: QueueRow[], newestFirst: boolean): QueueRow[] {
   return [...rows].sort((a, b) => {
@@ -59,6 +64,12 @@ function sortQueue(rows: QueueRow[], newestFirst: boolean): QueueRow[] {
     }
     return new Date(b.received_at).getTime() - new Date(a.received_at).getTime()
   })
+}
+
+function stripDisplayName(sender: string | null): string | null {
+  if (!sender) return null
+  const idx = sender.indexOf('<')
+  return idx > 0 ? sender.slice(0, idx).trim() : sender.trim()
 }
 
 function getInitials(name: string | null): string {
@@ -266,18 +277,48 @@ const FORWARD_OPTIONS = [
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
-function TierBadge({ tier }: { tier: Tier }) {
-  const s: Record<Tier, React.CSSProperties> = {
-    Emergency: { backgroundColor: 'var(--red-light)', color: 'var(--red)' },
-    STAT: { backgroundColor: 'var(--amber-light)', color: 'var(--amber)' },
-    Routine: { backgroundColor: 'var(--teal-light)', color: 'var(--teal-dark)' },
-  }
+const TIER_STYLES: Record<string, React.CSSProperties> = {
+  T1: { backgroundColor: 'var(--teal-light)', color: 'var(--teal-dark)' },
+  T2: { backgroundColor: 'var(--teal-light)', color: 'var(--teal-dark)' },
+  T3: { backgroundColor: 'var(--amber-light)', color: 'var(--amber)' },
+  T4: { backgroundColor: '#eff6ff', color: '#3b82f6' },
+  T5: { backgroundColor: '#f5f3ff', color: '#8b5cf6' },
+  T6: { backgroundColor: 'var(--gray-100)', color: 'var(--gray-500)' },
+  Emergency: { backgroundColor: 'var(--red-light)', color: 'var(--red)' },
+  STAT: { backgroundColor: 'var(--amber-light)', color: 'var(--amber)' },
+  Routine: { backgroundColor: 'var(--teal-light)', color: 'var(--teal-dark)' },
+}
+
+function TierBadge({ tier }: { tier: string }) {
+  const s = TIER_STYLES[tier] ?? { backgroundColor: 'var(--gray-100)', color: 'var(--gray-500)' }
   return (
     <span
-      className="inline-flex flex-shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-      style={s[tier]}
+      className="inline-flex flex-shrink-0 items-center rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide"
+      style={s}
     >
       {tier}
+    </span>
+  )
+}
+
+const URGENCY_CONFIG: Record<string, { dot: string; bg: string; text: string }> = {
+  Emergency: { dot: 'var(--red)',   bg: 'var(--red-light)',   text: 'var(--red)' },
+  STAT:      { dot: 'var(--amber)', bg: 'var(--amber-light)', text: 'var(--amber)' },
+  Routine:   { dot: '#22c55e',      bg: '#f0fdf4',            text: '#16a34a' },
+  High:      { dot: 'var(--red)',   bg: 'var(--red-light)',   text: 'var(--red)' },
+  Medium:    { dot: 'var(--amber)', bg: 'var(--amber-light)', text: 'var(--amber)' },
+  Low:       { dot: '#22c55e',      bg: '#f0fdf4',            text: '#16a34a' },
+}
+
+function UrgencyBadge({ urgency }: { urgency: string }) {
+  const c = URGENCY_CONFIG[urgency] ?? { dot: 'var(--gray-400)', bg: 'var(--gray-100)', text: 'var(--gray-500)' }
+  return (
+    <span
+      className="inline-flex flex-shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+      style={{ backgroundColor: c.bg, color: c.text }}
+    >
+      <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: c.dot }} />
+      {urgency}
     </span>
   )
 }
@@ -367,17 +408,17 @@ export default function Page() {
   const unreadCount = queue.filter((r) => !r.claimed_at).length
 
   const filters: FilterType[] = ['All', 'Emergency', 'STAT', 'Routine']
-  const filterCounts: Record<FilterType, number> = {
+  const filterCounts: Record<string, number> = {
     All: queue.length,
     Emergency: queue.filter((r) => r.tier === 'Emergency').length,
     STAT: queue.filter((r) => r.tier === 'STAT').length,
     Routine: queue.filter((r) => r.tier === 'Routine').length,
   }
 
-  const avatarBg: Record<Tier, string> = {
-    Emergency: 'var(--red)',
-    STAT: 'var(--amber)',
-    Routine: 'var(--teal)',
+  const avatarBg: Record<string, string> = {
+    T1: 'var(--teal)',  T2: 'var(--teal)',  T3: 'var(--amber)',
+    T4: '#3b82f6',      T5: '#8b5cf6',      T6: 'var(--gray-400)',
+    Emergency: 'var(--red)', STAT: 'var(--amber)', Routine: 'var(--teal)',
   }
 
   const urgencyColor: Record<string, string> = {
@@ -470,7 +511,7 @@ export default function Page() {
           {/* ── LEFT: INBOX QUEUE ─────────────────────────────────────── */}
           <div
             className="flex w-[680px] flex-none flex-col border-r"
-            style={{ borderColor: 'var(--border)' }}
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
           >
             {/* Queue header */}
             <div
@@ -532,37 +573,28 @@ export default function Page() {
             </div>
 
             {/* Email list */}
-            <div className="flex-1 overflow-y-auto">
+            <div
+              className="flex-1 overflow-y-auto"
+              style={{ backgroundColor: 'var(--gray-50)', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}
+            >
               {/* Loading skeleton */}
               {loading && (
-                <div className="flex flex-col">
+                <>
                   {[...Array(5)].map((_, i) => (
                     <div
                       key={i}
-                      className="flex items-stretch border-b"
-                      style={{ borderColor: 'var(--border)' }}
+                      className="flex items-start gap-3 rounded-lg border bg-white"
+                      style={{ borderColor: 'var(--border)', padding: '14px 16px' }}
                     >
-                      <div
-                        className="w-1 flex-shrink-0"
-                        style={{ backgroundColor: 'var(--gray-100)' }}
-                      />
-                      <div className="flex flex-1 flex-col gap-2 px-3 py-3">
-                        <div
-                          className="h-3 w-3/4 animate-pulse rounded"
-                          style={{ backgroundColor: 'var(--gray-100)' }}
-                        />
-                        <div
-                          className="h-2.5 w-1/2 animate-pulse rounded"
-                          style={{ backgroundColor: 'var(--gray-100)' }}
-                        />
-                        <div
-                          className="h-2 w-5/6 animate-pulse rounded"
-                          style={{ backgroundColor: 'var(--gray-100)' }}
-                        />
+                      <div className="h-9 w-9 flex-shrink-0 animate-pulse rounded-full" style={{ backgroundColor: 'var(--gray-100)' }} />
+                      <div className="flex flex-1 flex-col gap-2">
+                        <div className="h-3 w-3/4 animate-pulse rounded" style={{ backgroundColor: 'var(--gray-100)' }} />
+                        <div className="h-2.5 w-1/2 animate-pulse rounded" style={{ backgroundColor: 'var(--gray-100)' }} />
+                        <div className="h-2 w-1/3 animate-pulse rounded" style={{ backgroundColor: 'var(--gray-100)' }} />
                       </div>
                     </div>
                   ))}
-                </div>
+                </>
               )}
 
               {/* Error state */}
@@ -602,26 +634,44 @@ export default function Page() {
                 filteredQueue.map((row) => {
                   const isSelected = selectedId === row.id
                   const ts = formatTimestamp(row.received_at)
-                  const initials = getInitials(row.sender)
+                  const displayName = stripDisplayName(row.sender)
+                  const initials = getInitials(displayName)
                   const preview = row.subject || row.inquiry_type
 
-                  const rowStyle: React.CSSProperties = isSelected
-                    ? { border: '2px solid var(--teal)', backgroundColor: 'var(--teal-light)', padding: '14px 16px' }
-                    : row.tier === 'Emergency'
-                    ? { borderBottom: '1px solid var(--border)', borderLeft: '3px solid var(--red)', padding: '14px 16px' }
-                    : { borderBottom: '1px solid var(--border)', padding: '14px 16px' }
+                  const isEmergency = row.tier === 'Emergency' || row.tier === 'T1'
+                  const cardStyle: React.CSSProperties = isSelected
+                    ? {
+                        backgroundColor: 'var(--teal-light)',
+                        border: '2px solid var(--teal)',
+                        borderRadius: '8px',
+                        padding: '14px 16px',
+                      }
+                    : isEmergency
+                    ? {
+                        backgroundColor: 'white',
+                        border: '1px solid var(--border)',
+                        borderLeft: '3px solid var(--red)',
+                        borderRadius: '8px',
+                        padding: '14px 16px',
+                      }
+                    : {
+                        backgroundColor: 'white',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        padding: '14px 16px',
+                      }
 
                   return (
                     <button
                       key={row.id}
                       onClick={() => { setSelectedId(row.id); fetchEmailForRow(row) }}
                       className="flex w-full cursor-pointer items-start gap-3 text-left transition-colors"
-                      style={rowStyle}
+                      style={cardStyle}
                     >
                       {/* Avatar */}
                       <div
                         className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white"
-                        style={{ backgroundColor: avatarBg[row.tier] }}
+                        style={{ backgroundColor: avatarBg[row.tier] ?? 'var(--gray-400)' }}
                       >
                         {initials}
                       </div>
@@ -634,7 +684,7 @@ export default function Page() {
                             className="truncate text-[15px]"
                             style={{ fontWeight: 500, color: 'var(--gray-900)' }}
                           >
-                            {row.sender || row.inquiry_type}
+                            {displayName || row.inquiry_type}
                           </span>
                           <span
                             className="flex-shrink-0 text-[11px]"
@@ -649,17 +699,10 @@ export default function Page() {
                           {preview}
                         </p>
 
-                        {/* Bottom: tier badge + urgency */}
+                        {/* Bottom: tier badge + urgency badge */}
                         <div className="flex items-center gap-1.5 pt-0.5">
                           <TierBadge tier={row.tier} />
-                          {row.urgency && (
-                            <span
-                              className="text-[10px] font-semibold"
-                              style={{ color: urgencyColor[row.urgency] ?? 'var(--gray-400)' }}
-                            >
-                              {row.urgency}
-                            </span>
-                          )}
+                          {row.urgency && <UrgencyBadge urgency={row.urgency} />}
                         </div>
                       </div>
                     </button>
