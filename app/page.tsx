@@ -510,24 +510,26 @@ export default function Page() {
 
       await supabase.from('email_events').update({ status: 'resolved' }).eq('id', selectedQueueRow.id)
 
+      // Queue: advance immediately
+      const currentIdx = filteredQueue.findIndex((r) => r.id === selectedQueueRow.id)
+      const nextRow = filteredQueue[currentIdx + 1] ?? filteredQueue[currentIdx - 1] ?? null
+      if (nextRow) {
+        setSelectedId(nextRow.id)
+        fetchEmailForRow(nextRow)
+      } else {
+        setSelectedId(null)
+        setLiveEmail(null)
+      }
+
+      // Toast: appear and fade independently
       setSendStatus('success')
       setToastVisible(true)
       setToastFading(false)
-
-      // Auto-select next item in the filtered queue after a brief pause
-      const currentIdx = filteredQueue.findIndex((r) => r.id === selectedQueueRow.id)
-      const nextRow = filteredQueue[currentIdx + 1] ?? filteredQueue[currentIdx - 1] ?? null
-      setTimeout(() => {
-        setToastFading(true)
-      }, 2000)
+      setTimeout(() => setToastFading(true), 2000)
       setTimeout(() => {
         setSendStatus(null)
         setToastVisible(false)
         setToastFading(false)
-        if (nextRow) {
-          setSelectedId(nextRow.id)
-          fetchEmailForRow(nextRow)
-        }
       }, 2500)
     } catch {
       setSendStatus('error')
