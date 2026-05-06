@@ -289,14 +289,19 @@ const TIER_STYLES: Record<string, React.CSSProperties> = {
   Routine: { backgroundColor: 'var(--teal-light)', color: 'var(--teal-dark)' },
 }
 
+const TIER_LABELS: Record<string, string> = {
+  T1: 'T1 appointment', T2: 'T2 clinical',  T3: 'T3 complaint',
+  T4: 'T4 billing',     T5: 'T5 staff',      T6: 'T6 other',
+}
+
 function TierBadge({ tier }: { tier: string }) {
   const s = TIER_STYLES[tier] ?? { backgroundColor: 'var(--gray-100)', color: 'var(--gray-500)' }
   return (
     <span
-      className="inline-flex flex-shrink-0 items-center rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide"
-      style={s}
+      className="inline-flex flex-shrink-0 items-center rounded font-mono text-[10px] font-semibold tracking-wide"
+      style={{ ...s, padding: '5px 12px' }}
     >
-      {tier}
+      {TIER_LABELS[tier] ?? tier}
     </span>
   )
 }
@@ -311,11 +316,21 @@ const URGENCY_CONFIG: Record<string, { dot: string; bg: string; text: string }> 
 }
 
 function UrgencyBadge({ urgency }: { urgency: string }) {
+  if (urgency === 'Emergency') {
+    return (
+      <span
+        className="inline-flex flex-shrink-0 items-center rounded text-[10px] font-semibold tracking-wide"
+        style={{ backgroundColor: '#E24B4A', color: 'white', padding: '5px 12px' }}
+      >
+        Emergency
+      </span>
+    )
+  }
   const c = URGENCY_CONFIG[urgency] ?? { dot: 'var(--gray-400)', bg: 'var(--gray-100)', text: 'var(--gray-500)' }
   return (
     <span
-      className="inline-flex flex-shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-      style={{ backgroundColor: c.bg, color: c.text }}
+      className="inline-flex flex-shrink-0 items-center gap-1 rounded text-[10px] font-semibold tracking-wide"
+      style={{ backgroundColor: c.bg, color: c.text, padding: '5px 12px' }}
     >
       <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: c.dot }} />
       {urgency}
@@ -415,10 +430,10 @@ export default function Page() {
     Routine: queue.filter((r) => r.tier === 'Routine').length,
   }
 
-  const avatarBg: Record<string, string> = {
-    T1: 'var(--teal)',  T2: 'var(--teal)',  T3: 'var(--amber)',
-    T4: '#3b82f6',      T5: '#8b5cf6',      T6: 'var(--gray-400)',
-    Emergency: 'var(--red)', STAT: 'var(--amber)', Routine: 'var(--teal)',
+  const avatarStyle: Record<string, { backgroundColor: string; color: string }> = {
+    Emergency: { backgroundColor: '#FCEBEB', color: '#A32D2D' },
+    STAT:      { backgroundColor: '#FAEEDA', color: '#633806' },
+    Routine:   { backgroundColor: '#E1F5EE', color: '#0F6E56' },
   }
 
   const urgencyColor: Record<string, string> = {
@@ -670,8 +685,8 @@ export default function Page() {
                     >
                       {/* Avatar */}
                       <div
-                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white"
-                        style={{ backgroundColor: avatarBg[row.tier] ?? 'var(--gray-400)' }}
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold"
+                        style={avatarStyle[row.urgency] ?? { backgroundColor: 'var(--gray-100)', color: 'var(--gray-500)' }}
                       >
                         {initials}
                       </div>
