@@ -313,6 +313,9 @@ const FORWARD_OPTIONS = [
   'Dr. Chen',
 ]
 
+const CURRENT_USER = 'keith_agnew'
+const CURRENT_USER_NAME = 'Keith Agnew'
+
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
 const TIER_STYLES: Record<string, React.CSSProperties> = {
@@ -407,6 +410,7 @@ export default function Page() {
   const [sendStatus, setSendStatus] = useState<'success' | 'error' | null>(null)
   const [leavingId, setLeavingId] = useState<string | null>(null)
   const [showSignature, setShowSignature] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
   const [toastVisible, setToastVisible] = useState(false)
   const [toastFading, setToastFading] = useState(false)
   const [conflictRow, setConflictRow] = useState<QueueRow | null>(null)
@@ -497,6 +501,11 @@ export default function Page() {
   }, [fetchQueue])
 
   useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1_000)
+    return () => clearInterval(tick)
+  }, [])
+
+  useEffect(() => {
     const fresh = new Set<string>()
     queue.forEach(r => {
       if (!seenIdsRef.current.has(r.id)) fresh.add(r.id)
@@ -525,9 +534,6 @@ export default function Page() {
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
 
   // ── Claim helpers ──
-  const CURRENT_USER = 'keith_agnew'
-  const CURRENT_USER_NAME = 'Keith Agnew'
-
   async function claimRow(row: QueueRow): Promise<boolean> {
     const now = new Date()
     const expires = new Date(now.getTime() + claimDuration(row.tier) * 60 * 1000)
@@ -1268,38 +1274,44 @@ export default function Page() {
                       Unresolved
                     </span>
                   </div>
-                  <button
-                    className="rounded-md border px-3 py-1 text-xs font-medium transition-colors"
-                    style={{
-                      borderColor: 'var(--teal)',
-                      color: 'var(--teal)',
-                      backgroundColor: 'transparent',
-                    }}
-                  >
-                    Claim →
-                  </button>
+                  {selectedQueueRow && <UrgencyBadge urgency={selectedQueueRow.urgency} />}
                 </div>
-                {/* Response-time bar */}
-                <div className="mt-3">
-                  <div
-                    className="mb-1.5 flex items-center justify-between text-[11px]"
-                    style={{ color: 'var(--gray-400)' }}
-                  >
-                    <span>Response time</span>
-                    <span className="font-medium" style={{ color: 'var(--red)' }}>
-                      Overdue · 8m
-                    </span>
-                  </div>
-                  <div
-                    className="h-1.5 overflow-hidden rounded-full"
-                    style={{ backgroundColor: 'var(--gray-100)' }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: '85%', backgroundColor: 'var(--red)' }}
-                    />
-                  </div>
-                </div>
+                {/* Live response-time bar */}
+                {selectedQueueRow?.received_at && (() => {
+                  const thresholds: Record<string, number> = { Emergency: 15, STAT: 30, Routine: 120 }
+                  const threshold = (thresholds[selectedQueueRow.urgency] ?? 120) * 60 * 1000
+                  const elapsed = now - new Date(selectedQueueRow.received_at).getTime()
+                  const elapsedMin = Math.floor(elapsed / 60_000)
+                  const elapsedHrs = Math.floor(elapsedMin / 60)
+                  const elapsedLabel = elapsedHrs > 0 ? `${elapsedHrs}h ${elapsedMin % 60}m` : `${elapsedMin}m`
+                  const overdue = elapsed > threshold
+                  const pct = Math.min((elapsed / threshold) * 100, 100)
+                  const overdueMin = Math.floor((elapsed - threshold) / 60_000)
+                  return (
+                    <div className="mt-3">
+                      <div
+                        className="mb-1.5 flex items-center justify-between text-[11px]"
+                        style={{ color: 'var(--gray-400)' }}
+                      >
+                        <span>Response time · {elapsedLabel}</span>
+                        {overdue && (
+                          <span className="font-medium" style={{ color: 'var(--red)' }}>
+                            Overdue · {overdueMin}m
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className="h-1.5 overflow-hidden rounded-full"
+                        style={{ backgroundColor: 'var(--gray-100)' }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${pct}%`, backgroundColor: overdue ? 'var(--red)' : 'var(--teal)' }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Classification card */}
