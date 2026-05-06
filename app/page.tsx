@@ -359,6 +359,26 @@ export default function Page() {
   const [liveEmail, setLiveEmail] = useState<LiveEmail | null>(null)
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [draftLoading, setDraftLoading] = useState(false)
+
+  const generateDraft = useCallback(async (email: LiveEmail) => {
+    setDraftLoading(true)
+    setDraftText('Generating draft…')
+    try {
+      const res = await fetch('/api/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: email.subject, from: email.from, body: email.body }),
+      })
+      if (!res.ok) throw new Error('failed')
+      const { draft } = await res.json()
+      setDraftText(draft)
+    } catch {
+      setDraftText('')
+    } finally {
+      setDraftLoading(false)
+    }
+  }, [])
 
   const fetchEmailForRow = useCallback(async (row: QueueRow) => {
     console.log('[fetchEmailForRow] gmail_message_id:', row.gmail_message_id)
@@ -374,13 +394,15 @@ export default function Page() {
     try {
       const res = await fetch(`/api/gmail/message?messageId=${encodeURIComponent(row.gmail_message_id)}`)
       if (!res.ok) throw new Error('fetch failed')
-      setLiveEmail(await res.json())
+      const email = await res.json()
+      setLiveEmail(email)
+      generateDraft(email)
     } catch {
       setEmailError('Could not load email')
     } finally {
       setEmailLoading(false)
     }
-  }, [])
+  }, [generateDraft])
 
   const fetchQueue = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -808,8 +830,8 @@ export default function Page() {
               )}
             </div>
 
-            {/* Email body — scrollable, 50% */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+            {/* Email body — scrollable, 40% */}
+            <div className="flex-[2] min-h-0 overflow-y-auto px-6 py-5">
               {selectedQueueRow ? (
                 emailLoading ? (
                   <div className="flex flex-col gap-3">
@@ -845,9 +867,9 @@ export default function Page() {
               )}
             </div>
 
-            {/* Draft compose — 50%, flex column so textarea fills space */}
+            {/* Draft compose — 60%, flex column so textarea fills space */}
             <div
-              className="flex flex-1 min-h-0 flex-col border-t px-6 py-4"
+              className="flex flex-[3] min-h-0 flex-col border-t px-6 py-4"
               style={{
                 borderColor: 'var(--border)',
                 backgroundColor: 'var(--gray-50)',
@@ -874,23 +896,26 @@ export default function Page() {
                 className="w-full flex-1 resize-none rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
                 style={{
                   borderColor: 'var(--border)',
-                  color: 'var(--gray-900)',
+                  color: draftLoading ? 'var(--gray-400)' : 'var(--gray-900)',
                   backgroundColor: 'white',
                   fontFamily: 'var(--font-dm-sans), sans-serif',
                   lineHeight: '1.6',
                 }}
                 value={draftText}
                 onChange={(e) => setDraftText(e.target.value)}
+                disabled={draftLoading}
               />
               <div className="mt-3 flex flex-shrink-0 items-center gap-2">
                 <button
                   className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 active:opacity-80"
                   style={{ backgroundColor: 'var(--teal)' }}
                 >
-                  Create Gmail Draft
+                  Send
                 </button>
                 <button
-                  className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
+                  onClick={() => liveEmail && generateDraft(liveEmail)}
+                  disabled={draftLoading || !liveEmail}
+                  className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-40"
                   style={{
                     borderColor: 'var(--border)',
                     color: 'var(--gray-600)',
