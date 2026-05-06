@@ -62,6 +62,13 @@ body {
   animation: card-in 300ms ease forwards;
 }
 
+.card-out {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 250ms ease, transform 250ms ease;
+  pointer-events: none;
+}
+
 /* Staggered pulse dots */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }

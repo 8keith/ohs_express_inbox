@@ -381,6 +381,7 @@ export default function Page() {
   const [newIds, setNewIds] = useState<Set<string>>(new Set())
   const [sending, setSending] = useState(false)
   const [sendStatus, setSendStatus] = useState<'success' | 'error' | null>(null)
+  const [leavingId, setLeavingId] = useState<string | null>(null)
   const [showSignature, setShowSignature] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastFading, setToastFading] = useState(false)
@@ -524,24 +525,30 @@ export default function Page() {
 
       await supabase.from('email_events').update({ status: 'resolved' }).eq('id', selectedQueueRow.id)
 
-      // Remove resolved row from local state immediately, don't wait for next poll
-      setQueue(prev => prev.filter(r => r.id !== selectedQueueRow.id))
-
-      // Queue: advance immediately
-      const currentIdx = filteredQueue.findIndex((r) => r.id === selectedQueueRow.id)
+      const sentId = selectedQueueRow.id
+      const currentIdx = filteredQueue.findIndex((r) => r.id === sentId)
       const nextRow = filteredQueue[currentIdx + 1] ?? filteredQueue[currentIdx - 1] ?? null
-      if (nextRow) {
-        setSelectedId(nextRow.id)
-        fetchEmailForRow(nextRow)
-      } else {
-        setSelectedId(null)
-        setLiveEmail(null)
-      }
 
-      // Toast: appear and fade independently
+      // Start card fade-out and toast simultaneously
+      setLeavingId(sentId)
       setSendStatus('success')
       setToastVisible(true)
       setToastFading(false)
+
+      // After card fade-out completes: remove from queue and advance
+      setTimeout(() => {
+        setLeavingId(null)
+        setQueue(prev => prev.filter(r => r.id !== sentId))
+        if (nextRow) {
+          setSelectedId(nextRow.id)
+          fetchEmailForRow(nextRow)
+        } else {
+          setSelectedId(null)
+          setLiveEmail(null)
+        }
+      }, 250)
+
+      // Toast fades out independently
       setTimeout(() => setToastFading(true), 2000)
       setTimeout(() => {
         setSendStatus(null)
@@ -817,7 +824,7 @@ export default function Page() {
                     <button
                       key={row.id}
                       onClick={() => { setSelectedId(row.id); fetchEmailForRow(row) }}
-                      className={`flex w-full cursor-pointer items-start gap-3 text-left transition-colors${newIds.has(row.id) ? ' card-in' : ''}`}
+                      className={`flex w-full cursor-pointer items-start gap-3 text-left transition-colors${newIds.has(row.id) ? ' card-in' : ''}${leavingId === row.id ? ' card-out' : ''}`}
                       style={cardStyle}
                     >
                       {/* Avatar */}
