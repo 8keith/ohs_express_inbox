@@ -388,6 +388,7 @@ export default function Page() {
   const [draftText, setDraftText] = useState(DRAFT_TEXT)
   const [forwardTo, setForwardTo] = useState(FORWARD_OPTIONS[0])
   const [newestFirst, setNewestFirst] = useState(true)
+  const [showMyDrafts, setShowMyDrafts] = useState(false)
 
   // ── Queue state (live from Supabase) ──
   const [queue, setQueue] = useState<QueueRow[]>([])
@@ -516,8 +517,10 @@ export default function Page() {
     activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.urgency === activeFilter)
   ).filter((r) => {
     const s = r.status
-    return s !== 'no_content' && s !== 'resolved' && s !== 'done' && s !== 'billed' && s !== 'sent'
-      && r.inquiry_type !== 'no_content'
+    if (s === 'no_content' || s === 'resolved' || s === 'done' || s === 'billed' || s === 'sent') return false
+    if (r.inquiry_type === 'no_content') return false
+    if (showMyDrafts) return isClaimed(r) && r.assigned_to === CURRENT_USER
+    return true
   })
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
 
@@ -649,6 +652,7 @@ export default function Page() {
     return s !== 'no_content' && s !== 'resolved' && s !== 'done' && s !== 'billed' && s !== 'sent'
       && r.inquiry_type !== 'no_content'
   })
+  const myDraftsCount = visibleQueue.filter((r) => isClaimed(r) && r.assigned_to === CURRENT_USER).length
   const unreadCount = visibleQueue.length
   const filterCounts: Record<string, number> = {
     All: visibleQueue.length,
@@ -772,6 +776,13 @@ export default function Page() {
                     {unreadCount}
                   </span>
                 )}
+                <button
+                  onClick={() => setNewestFirst((v) => !v)}
+                  className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                  style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #4ade80' }}
+                >
+                  {newestFirst ? 'Newest first' : 'Earliest first'}
+                </button>
               </div>
               <span className="text-xs" style={{ color: 'var(--gray-400)' }}>
                 {loading ? 'Loading…' : `${filteredQueue.length} message${filteredQueue.length !== 1 ? 's' : ''}`}
@@ -800,13 +811,17 @@ export default function Page() {
                   )}
                 </button>
               ))}
-              <div className="flex-1" />
               <button
-                onClick={() => setNewestFirst((v) => !v)}
+                onClick={() => setShowMyDrafts((v) => !v)}
                 className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-                style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #4ade80' }}
+                style={
+                  showMyDrafts
+                    ? { backgroundColor: 'var(--teal)', color: 'white', border: '1px solid var(--teal)' }
+                    : { backgroundColor: 'white', border: '1px solid var(--border)', color: 'var(--gray-600)' }
+                }
               >
-                {newestFirst ? 'Newest first' : 'Earliest first'}
+                My Drafts
+                <span className="ml-1 opacity-60">{myDraftsCount}</span>
               </button>
             </div>
 
