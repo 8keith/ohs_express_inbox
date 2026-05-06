@@ -61,6 +61,14 @@ function sortQueue(rows: QueueRow[], newestFirst: boolean): QueueRow[] {
   })
 }
 
+function getInitials(name: string | null): string {
+  if (!name) return '?'
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase()
+}
+
 function formatTimestamp(iso: string): string {
   const d = new Date(iso)
   const now = new Date()
@@ -351,8 +359,9 @@ export default function Page() {
   const selectedEmail = EMAILS.find((e) => e.id === selectedId) ?? EMAILS[0]
 
   const sortedQueue = sortQueue(queue, newestFirst)
-  const filteredQueue =
+  const filteredQueue = (
     activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.tier === activeFilter)
+  ).filter((r) => r.inquiry_type !== 'no_content' && r.status !== 'no_content')
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
 
   const unreadCount = queue.filter((r) => !r.claimed_at).length
@@ -365,7 +374,7 @@ export default function Page() {
     Routine: queue.filter((r) => r.tier === 'Routine').length,
   }
 
-  const tierBarColor: Record<Tier, string> = {
+  const avatarBg: Record<Tier, string> = {
     Emergency: 'var(--red)',
     STAT: 'var(--amber)',
     Routine: 'var(--teal)',
@@ -591,54 +600,41 @@ export default function Page() {
               {!loading &&
                 !fetchError &&
                 filteredQueue.map((row) => {
-                  const isUnread = !row.claimed_at
+                  const isSelected = selectedId === row.id
                   const ts = formatTimestamp(row.received_at)
+                  const initials = getInitials(row.sender)
+                  const preview = row.subject || row.inquiry_type
+
+                  const rowStyle: React.CSSProperties = isSelected
+                    ? { border: '2px solid var(--teal)', backgroundColor: 'var(--teal-light)', padding: '14px 16px' }
+                    : row.tier === 'Emergency'
+                    ? { borderBottom: '1px solid var(--border)', borderLeft: '3px solid var(--red)', padding: '14px 16px' }
+                    : { borderBottom: '1px solid var(--border)', padding: '14px 16px' }
+
                   return (
                     <button
                       key={row.id}
                       onClick={() => { setSelectedId(row.id); fetchEmailForRow(row) }}
-                      className="flex w-full cursor-pointer items-stretch border-b text-left transition-colors"
-                      style={{
-                        borderColor: 'var(--border)',
-                        backgroundColor:
-                          selectedId === row.id ? 'var(--teal-light)' : 'transparent',
-                      }}
+                      className="flex w-full cursor-pointer items-start gap-3 text-left transition-colors"
+                      style={rowStyle}
                     >
-                      {/* Tier colour strip */}
+                      {/* Avatar */}
                       <div
-                        className="w-1 flex-shrink-0"
-                        style={{ backgroundColor: tierBarColor[row.tier] }}
-                      />
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white"
+                        style={{ backgroundColor: avatarBg[row.tier] }}
+                      >
+                        {initials}
+                      </div>
 
                       {/* Content */}
-                      <div className="flex flex-1 flex-col gap-1 px-3 py-3">
-                        {/* Row 1: unread dot + tier badge + urgency + inquiry_type + time */}
-                        <div className="flex items-center gap-2">
-                          {isUnread ? (
-                            <span
-                              className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                              style={{ backgroundColor: 'var(--teal)' }}
-                            />
-                          ) : (
-                            <span className="h-1.5 w-1.5 flex-shrink-0" />
-                          )}
-                          <TierBadge tier={row.tier} />
-                          {row.urgency && (
-                            <span
-                              className="flex-shrink-0 text-[10px] font-semibold"
-                              style={{ color: urgencyColor[row.urgency] ?? 'var(--gray-400)' }}
-                            >
-                              {row.urgency}
-                            </span>
-                          )}
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        {/* Top: sender name + timestamp */}
+                        <div className="flex items-center justify-between gap-2">
                           <span
-                            className="flex-1 truncate text-[13px]"
-                            style={{
-                              fontWeight: isUnread ? 600 : 400,
-                              color: 'var(--gray-900)',
-                            }}
+                            className="truncate text-[15px]"
+                            style={{ fontWeight: 500, color: 'var(--gray-900)' }}
                           >
-                            {row.subject || row.inquiry_type}
+                            {row.sender || row.inquiry_type}
                           </span>
                           <span
                             className="flex-shrink-0 text-[11px]"
@@ -648,47 +644,23 @@ export default function Page() {
                           </span>
                         </div>
 
-                        {/* Sender name */}
-                        {row.sender && (
-                          <p
-                            className="truncate pl-5 text-[12px] font-medium"
-                            style={{ color: 'var(--gray-500)' }}
-                          >
-                            {row.sender}
-                          </p>
-                        )}
+                        {/* Middle: preview snippet */}
+                        <p className="truncate text-[13px]" style={{ color: 'var(--gray-500)' }}>
+                          {preview}
+                        </p>
 
-                        {/* Row 2: status + assigned name */}
-                        <div
-                          className="flex items-center gap-1.5 pl-5 text-xs"
-                          style={{ color: 'var(--gray-400)' }}
-                        >
-                          <span
-                            className="capitalize"
-                            style={{
-                              color:
-                                row.status === 'unresolved' ? 'var(--red)' : 'var(--gray-400)',
-                            }}
-                          >
-                            {row.status}
-                          </span>
-                          {row.assigned_to_name && (
-                            <>
-                              <span>·</span>
-                              <span style={{ color: 'var(--gray-600)' }}>
-                                {row.assigned_to_name}
-                              </span>
-                            </>
+                        {/* Bottom: tier badge + urgency */}
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          <TierBadge tier={row.tier} />
+                          {row.urgency && (
+                            <span
+                              className="text-[10px] font-semibold"
+                              style={{ color: urgencyColor[row.urgency] ?? 'var(--gray-400)' }}
+                            >
+                              {row.urgency}
+                            </span>
                           )}
                         </div>
-
-                        {/* Row 3: preview */}
-                        <p
-                          className="truncate pl-5 text-[11px] leading-relaxed"
-                          style={{ color: 'var(--gray-400)' }}
-                        >
-                          {row.sender || row.inquiry_type}
-                        </p>
                       </div>
                     </button>
                   )
