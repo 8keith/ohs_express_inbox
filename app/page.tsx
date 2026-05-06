@@ -510,6 +510,9 @@ export default function Page() {
 
       await supabase.from('email_events').update({ status: 'resolved' }).eq('id', selectedQueueRow.id)
 
+      // Remove resolved row from local state immediately, don't wait for next poll
+      setQueue(prev => prev.filter(r => r.id !== selectedQueueRow.id))
+
       // Queue: advance immediately
       const currentIdx = filteredQueue.findIndex((r) => r.id === selectedQueueRow.id)
       const nextRow = filteredQueue[currentIdx + 1] ?? filteredQueue[currentIdx - 1] ?? null
@@ -541,11 +544,16 @@ export default function Page() {
   const unreadCount = queue.filter((r) => !r.claimed_at).length
 
   const filters: FilterType[] = ['All', 'Emergency', 'STAT', 'Routine']
+  const visibleQueue = sortedQueue.filter((r) => {
+    const s = r.status
+    return s !== 'no_content' && s !== 'resolved' && s !== 'done' && s !== 'billed' && s !== 'sent'
+      && r.inquiry_type !== 'no_content'
+  })
   const filterCounts: Record<string, number> = {
-    All: queue.length,
-    Emergency: queue.filter((r) => r.urgency === 'Emergency').length,
-    STAT: queue.filter((r) => r.urgency === 'STAT').length,
-    Routine: queue.filter((r) => r.urgency === 'Routine').length,
+    All: visibleQueue.length,
+    Emergency: visibleQueue.filter((r) => r.urgency === 'Emergency').length,
+    STAT: visibleQueue.filter((r) => r.urgency === 'STAT').length,
+    Routine: visibleQueue.filter((r) => r.urgency === 'Routine').length,
   }
 
   const avatarStyle: Record<string, { backgroundColor: string; color: string }> = {
