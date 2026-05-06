@@ -521,12 +521,12 @@ export default function Page() {
         {/* ═══════════════════════════════════════════════════════════════
             THREE-COLUMN WORKSPACE
         ════════════════════════════════════════════════════════════════ */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-x-auto overflow-y-hidden">
 
           {/* ── LEFT: INBOX QUEUE ─────────────────────────────────────── */}
           <div
-            className="flex w-[560px] flex-none flex-col border-r"
-            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
+            className="flex flex-shrink flex-col border-r"
+            style={{ minWidth: '320px', maxWidth: '560px', flexBasis: '560px', borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
           >
             {/* Queue header */}
             <div
@@ -725,7 +725,7 @@ export default function Page() {
           {/* ── CENTRE: EMAIL VIEW + DRAFT ────────────────────────────── */}
           <div
             className="flex flex-1 flex-col overflow-hidden border-r"
-            style={{ borderColor: 'var(--border)' }}
+            style={{ minWidth: '380px', borderColor: 'var(--border)' }}
           >
             {/* Email header */}
             <div
@@ -808,8 +808,8 @@ export default function Page() {
               )}
             </div>
 
-            {/* Email body — scrollable */}
-            <div className="flex-1 overflow-y-auto px-6 py-5">
+            {/* Email body — scrollable, 50% */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
               {selectedQueueRow ? (
                 emailLoading ? (
                   <div className="flex flex-col gap-3">
@@ -845,15 +845,15 @@ export default function Page() {
               )}
             </div>
 
-            {/* Draft compose — fixed at bottom */}
+            {/* Draft compose — 50%, flex column so textarea fills space */}
             <div
-              className="flex-shrink-0 border-t px-6 py-4"
+              className="flex flex-1 min-h-0 flex-col border-t px-6 py-4"
               style={{
                 borderColor: 'var(--border)',
                 backgroundColor: 'var(--gray-50)',
               }}
             >
-              <div className="mb-2.5 flex items-center justify-between">
+              <div className="mb-2.5 flex flex-shrink-0 items-center justify-between">
                 <span className="text-sm font-semibold" style={{ color: 'var(--gray-900)' }}>
                   Draft reply
                 </span>
@@ -871,10 +871,8 @@ export default function Page() {
                 </span>
               </div>
               <textarea
-                className="w-full resize-y rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+                className="w-full flex-1 resize-none rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
                 style={{
-                  minHeight: '148px',
-                  maxHeight: '280px',
                   borderColor: 'var(--border)',
                   color: 'var(--gray-900)',
                   backgroundColor: 'white',
@@ -884,7 +882,7 @@ export default function Page() {
                 value={draftText}
                 onChange={(e) => setDraftText(e.target.value)}
               />
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-3 flex flex-shrink-0 items-center gap-2">
                 <button
                   className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 active:opacity-80"
                   style={{ backgroundColor: 'var(--teal)' }}
@@ -916,7 +914,7 @@ export default function Page() {
           </div>
 
           {/* ── RIGHT: TRIAGE PANEL ───────────────────────────────────── */}
-          <div className="flex w-[440px] flex-none flex-col">
+          <div className="flex flex-shrink flex-col" style={{ minWidth: '300px', maxWidth: '440px', flexBasis: '440px' }}>
             {/* Panel header */}
             <div
               className="flex flex-shrink-0 items-center border-b px-4 py-3"
