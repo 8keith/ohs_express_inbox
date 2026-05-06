@@ -38,6 +38,14 @@ interface EmailItem {
   body: string
 }
 
+interface LiveEmail {
+  subject: string
+  from: string
+  to: string
+  date: string
+  body: string
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const TIER_ORDER: Record<Tier, number> = { Emergency: 0, STAT: 1, Routine: 2 }
@@ -283,6 +291,31 @@ export default function Page() {
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
+  const [liveEmail, setLiveEmail] = useState<LiveEmail | null>(null)
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+
+  const fetchEmailForRow = useCallback(async (row: QueueRow) => {
+    if (!row.gmail_message_id) {
+      setLiveEmail(null)
+      setEmailLoading(false)
+      setEmailError(null)
+      return
+    }
+    setEmailLoading(true)
+    setLiveEmail(null)
+    setEmailError(null)
+    try {
+      const res = await fetch(`/api/gmail/message?messageId=${encodeURIComponent(row.gmail_message_id)}`)
+      if (!res.ok) throw new Error('fetch failed')
+      setLiveEmail(await res.json())
+    } catch {
+      setEmailError('Could not load email')
+    } finally {
+      setEmailLoading(false)
+    }
+  }, [])
+
   const fetchQueue = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     const { data, error } = await supabase
@@ -296,12 +329,14 @@ export default function Page() {
       const rows = (data ?? []) as QueueRow[]
       setQueue(rows)
       if (!silent && rows.length > 0) {
-        setSelectedId(sortQueue(rows, true)[0].id)
+        const first = sortQueue(rows, true)[0]
+        setSelectedId(first.id)
+        fetchEmailForRow(first)
       }
       setFetchError(null)
     }
     if (!silent) setLoading(false)
-  }, [])
+  }, [fetchEmailForRow])
 
   useEffect(() => {
     fetchQueue()
@@ -316,6 +351,7 @@ export default function Page() {
   const sortedQueue = sortQueue(queue, newestFirst)
   const filteredQueue =
     activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.tier === activeFilter)
+  const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
 
   const unreadCount = queue.filter((r) => !r.claimed_at).length
 
@@ -558,7 +594,7 @@ export default function Page() {
                   return (
                     <button
                       key={row.id}
-                      onClick={() => setSelectedId(row.id)}
+                      onClick={() => { setSelectedId(row.id); fetchEmailForRow(row) }}
                       className="flex w-full cursor-pointer items-stretch border-b text-left transition-colors"
                       style={{
                         borderColor: 'var(--border)',
@@ -658,45 +694,117 @@ export default function Page() {
               className="flex-shrink-0 border-b px-6 py-4"
               style={{ borderColor: 'var(--border)' }}
             >
-              <div className="mb-2 flex items-start gap-2">
-                <TierBadge tier={selectedEmail.tier} />
-                <h2
-                  className="text-[15px] font-semibold leading-snug"
-                  style={{ color: 'var(--gray-900)' }}
-                >
-                  {selectedEmail.subject}
-                </h2>
-              </div>
-              <div
-                className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs"
-                style={{ color: 'var(--gray-600)' }}
-              >
-                <span>
-                  <span style={{ color: 'var(--gray-400)' }}>From: </span>
-                  <span className="font-medium">{selectedEmail.fromName}</span>
-                  <span style={{ color: 'var(--gray-400)' }}>
-                    {' '}
-                    &lt;{selectedEmail.fromEmail}&gt;
-                  </span>
-                </span>
-                <span>
-                  <span style={{ color: 'var(--gray-400)' }}>To: </span>
-                  <span style={{ color: 'var(--teal)' }}>hello@ohsdemo.com</span>
-                </span>
-                <span className="ml-auto" style={{ color: 'var(--gray-400)' }}>
-                  {selectedEmail.fullDate}
-                </span>
-              </div>
+              {selectedQueueRow ? (
+                emailLoading ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="h-4 w-3/4 animate-pulse rounded" style={{ backgroundColor: 'var(--gray-100)' }} />
+                    <div className="h-3 w-1/2 animate-pulse rounded" style={{ backgroundColor: 'var(--gray-100)' }} />
+                  </div>
+                ) : emailError ? (
+                  <p className="text-sm" style={{ color: 'var(--red)' }}>{emailError}</p>
+                ) : liveEmail ? (
+                  <>
+                    <div className="mb-2 flex items-start gap-2">
+                      <TierBadge tier={selectedQueueRow.tier} />
+                      <h2
+                        className="text-[15px] font-semibold leading-snug"
+                        style={{ color: 'var(--gray-900)' }}
+                      >
+                        {liveEmail.subject}
+                      </h2>
+                    </div>
+                    <div
+                      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs"
+                      style={{ color: 'var(--gray-600)' }}
+                    >
+                      <span>
+                        <span style={{ color: 'var(--gray-400)' }}>From: </span>
+                        <span className="font-medium">{liveEmail.from}</span>
+                      </span>
+                      <span>
+                        <span style={{ color: 'var(--gray-400)' }}>To: </span>
+                        <span style={{ color: 'var(--teal)' }}>{liveEmail.to}</span>
+                      </span>
+                      <span className="ml-auto" style={{ color: 'var(--gray-400)' }}>
+                        {liveEmail.date}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
+                    Email content unavailable
+                  </p>
+                )
+              ) : (
+                <>
+                  <div className="mb-2 flex items-start gap-2">
+                    <TierBadge tier={selectedEmail.tier} />
+                    <h2
+                      className="text-[15px] font-semibold leading-snug"
+                      style={{ color: 'var(--gray-900)' }}
+                    >
+                      {selectedEmail.subject}
+                    </h2>
+                  </div>
+                  <div
+                    className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs"
+                    style={{ color: 'var(--gray-600)' }}
+                  >
+                    <span>
+                      <span style={{ color: 'var(--gray-400)' }}>From: </span>
+                      <span className="font-medium">{selectedEmail.fromName}</span>
+                      <span style={{ color: 'var(--gray-400)' }}>
+                        {' '}
+                        &lt;{selectedEmail.fromEmail}&gt;
+                      </span>
+                    </span>
+                    <span>
+                      <span style={{ color: 'var(--gray-400)' }}>To: </span>
+                      <span style={{ color: 'var(--teal)' }}>hello@ohsdemo.com</span>
+                    </span>
+                    <span className="ml-auto" style={{ color: 'var(--gray-400)' }}>
+                      {selectedEmail.fullDate}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Email body — scrollable */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              <pre
-                className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
-                style={{ color: 'var(--gray-900)' }}
-              >
-                {selectedEmail.body}
-              </pre>
+              {selectedQueueRow ? (
+                emailLoading ? (
+                  <div className="flex flex-col gap-3">
+                    {[...Array(8)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-3 animate-pulse rounded"
+                        style={{ backgroundColor: 'var(--gray-100)', width: `${60 + (i % 4) * 10}%` }}
+                      />
+                    ))}
+                  </div>
+                ) : emailError ? (
+                  <p className="text-sm" style={{ color: 'var(--red)' }}>{emailError}</p>
+                ) : liveEmail ? (
+                  <pre
+                    className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
+                    style={{ color: 'var(--gray-900)' }}
+                  >
+                    {liveEmail.body}
+                  </pre>
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
+                    Email content unavailable
+                  </p>
+                )
+              ) : (
+                <pre
+                  className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
+                  style={{ color: 'var(--gray-900)' }}
+                >
+                  {selectedEmail.body}
+                </pre>
+              )}
             </div>
 
             {/* Draft compose — fixed at bottom */}
