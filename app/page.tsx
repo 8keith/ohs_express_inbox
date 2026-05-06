@@ -923,19 +923,18 @@ export default function Page() {
                         {stripSubjectPrefix(liveEmail.subject)}
                       </h2>
                     </div>
-                    <div
-                      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs"
-                      style={{ color: 'var(--gray-600)' }}
-                    >
-                      <span>
-                        <span style={{ color: 'var(--gray-400)' }}>From: </span>
-                        <span className="font-medium">{liveEmail.from}</span>
-                      </span>
-                      <span>
-                        <span style={{ color: 'var(--gray-400)' }}>To: </span>
-                        <span style={{ color: 'var(--teal)' }}>OHS Care Team &lt;hello@ohsdemo.com&gt;</span>
-                      </span>
-                      <span className="ml-auto" style={{ color: 'var(--gray-400)' }}>
+                    <div className="flex items-start gap-4 text-xs" style={{ color: 'var(--gray-600)' }}>
+                      <div className="flex flex-1 flex-col gap-0.5">
+                        <span>
+                          <span style={{ color: 'var(--gray-400)' }}>From: </span>
+                          <span className="font-medium">{liveEmail.from}</span>
+                        </span>
+                        <span>
+                          <span style={{ color: 'var(--gray-400)' }}>To: </span>
+                          <span style={{ color: 'var(--teal)' }}>OHS Care Team &lt;hello@ohsdemo.com&gt;</span>
+                        </span>
+                      </div>
+                      <span className="flex-shrink-0" style={{ color: 'var(--gray-400)' }}>
                         {formatEmailDate(liveEmail.date)}
                       </span>
                     </div>
