@@ -562,14 +562,13 @@ export default function Page() {
     }
   }
 
-  const unreadCount = queue.filter((r) => !r.claimed_at).length
-
   const filters: FilterType[] = ['All', 'Emergency', 'STAT', 'Routine']
   const visibleQueue = sortedQueue.filter((r) => {
     const s = r.status
     return s !== 'no_content' && s !== 'resolved' && s !== 'done' && s !== 'billed' && s !== 'sent'
       && r.inquiry_type !== 'no_content'
   })
+  const unreadCount = visibleQueue.length
   const filterCounts: Record<string, number> = {
     All: visibleQueue.length,
     Emergency: visibleQueue.filter((r) => r.urgency === 'Emergency').length,

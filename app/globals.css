@@ -59,7 +59,7 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 .card-in {
-  animation: card-in 250ms ease-out forwards;
+  animation: card-in 500ms ease-out forwards;
 }
 
 .card-out {
