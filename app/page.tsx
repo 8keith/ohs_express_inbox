@@ -743,6 +743,7 @@ export default function Page() {
                     row.urgency === 'Emergency' ? '5px solid #E24B4A' :
                     row.urgency === 'STAT'      ? '5px solid #EF9F27' :
                     undefined
+                  const isResolved = row.status === 'resolved'
                   const cardStyle: React.CSSProperties = isSelected
                     ? {
                         backgroundColor: 'var(--teal-light)',
@@ -751,7 +752,7 @@ export default function Page() {
                         padding: '14px 16px',
                       }
                     : {
-                        backgroundColor: 'white',
+                        backgroundColor: isResolved ? '#EFF6FF' : 'white',
                         border: '1px solid var(--border)',
                         ...(accentBorder ? { borderLeft: accentBorder } : {}),
                         borderRadius: '8px',
@@ -810,7 +811,7 @@ export default function Page() {
                             </span>
                           )}
                           {row.status === 'resolved' && (
-                            <span className="font-medium" style={{ color: '#16a34a', fontSize: '11px' }}>Resolved</span>
+                            <span className="font-medium" style={{ color: '#2563EB', fontSize: '11px' }}>Resolved</span>
                           )}
                         </div>
                       </div>
