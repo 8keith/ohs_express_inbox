@@ -80,6 +80,21 @@ function getInitials(name: string | null): string {
     : name.slice(0, 2).toUpperCase()
 }
 
+function splitBody(body: string): { main: string; signature: string | null } {
+  const lines = body.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === '--') {
+      return { main: lines.slice(0, i).join('\n').trimEnd(), signature: lines.slice(i).join('\n') }
+    }
+  }
+  for (let i = 3; i < lines.length; i++) {
+    if (lines[i].includes('[image:') || /https?:\/\//.test(lines[i])) {
+      return { main: lines.slice(0, i).join('\n').trimEnd(), signature: lines.slice(i).join('\n') }
+    }
+  }
+  return { main: body, signature: null }
+}
+
 function formatTimestamp(iso: string): string {
   const d = new Date(iso)
   const now = new Date()
@@ -364,6 +379,9 @@ export default function Page() {
   const draftMapRef = useRef<Map<string, string>>(new Map())
   const [sending, setSending] = useState(false)
   const [sendStatus, setSendStatus] = useState<'success' | 'error' | null>(null)
+  const [showSignature, setShowSignature] = useState(false)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastFading, setToastFading] = useState(false)
 
   const generateDraft = useCallback(async (email: LiveEmail, rowId: string) => {
     setDraftLoading(true)
@@ -405,6 +423,7 @@ export default function Page() {
       setDraftMode('choice')
       setDraftText('')
     }
+    setShowSignature(false)
     setEmailLoading(true)
     setLiveEmail(null)
     setEmailError(null)
@@ -455,7 +474,11 @@ export default function Page() {
   const sortedQueue = sortQueue(queue, newestFirst)
   const filteredQueue = (
     activeFilter === 'All' ? sortedQueue : sortedQueue.filter((r) => r.urgency === activeFilter)
-  ).filter((r) => r.inquiry_type !== 'no_content' && r.status !== 'no_content')
+  ).filter((r) => {
+    const s = r.status
+    return s !== 'no_content' && s !== 'resolved' && s !== 'done' && s !== 'billed' && s !== 'sent'
+      && r.inquiry_type !== 'no_content'
+  })
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
 
   // ── Draft mode handlers ──
@@ -488,17 +511,24 @@ export default function Page() {
       await supabase.from('email_events').update({ status: 'resolved' }).eq('id', selectedQueueRow.id)
 
       setSendStatus('success')
+      setToastVisible(true)
+      setToastFading(false)
 
       // Auto-select next item in the filtered queue after a brief pause
       const currentIdx = filteredQueue.findIndex((r) => r.id === selectedQueueRow.id)
       const nextRow = filteredQueue[currentIdx + 1] ?? filteredQueue[currentIdx - 1] ?? null
       setTimeout(() => {
+        setToastFading(true)
+      }, 2000)
+      setTimeout(() => {
         setSendStatus(null)
+        setToastVisible(false)
+        setToastFading(false)
         if (nextRow) {
           setSelectedId(nextRow.id)
           fetchEmailForRow(nextRow)
         }
-      }, 1500)
+      }, 2500)
     } catch {
       setSendStatus('error')
     } finally {
@@ -923,12 +953,38 @@ export default function Page() {
                 ) : emailError ? (
                   <p className="text-sm" style={{ color: 'var(--red)' }}>{emailError}</p>
                 ) : liveEmail ? (
-                  <pre
-                    className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
-                    style={{ color: 'var(--gray-900)' }}
-                  >
-                    {liveEmail.body}
-                  </pre>
+                  (() => {
+                    const { main, signature } = splitBody(liveEmail.body)
+                    return (
+                      <>
+                        <pre
+                          className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
+                          style={{ color: 'var(--gray-900)' }}
+                        >
+                          {main}
+                        </pre>
+                        {signature && (
+                          <>
+                            <button
+                              onClick={() => setShowSignature(v => !v)}
+                              className="mt-3 text-xs"
+                              style={{ color: 'var(--gray-400)' }}
+                            >
+                              {showSignature ? 'Hide signature' : 'View signature'}
+                            </button>
+                            {showSignature && (
+                              <pre
+                                className="whitespace-pre-wrap font-sans text-xs leading-relaxed mt-2"
+                                style={{ color: 'var(--gray-400)' }}
+                              >
+                                {signature}
+                              </pre>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )
+                  })()
                 ) : (
                   <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
                     Email content unavailable
@@ -1036,11 +1092,6 @@ export default function Page() {
                 >
                   Forward
                 </button>
-                {sendStatus === 'success' && (
-                  <span className="text-xs font-medium" style={{ color: 'var(--teal)' }}>
-                    Sent ✓
-                  </span>
-                )}
                 {sendStatus === 'error' && (
                   <span className="text-xs font-medium" style={{ color: 'var(--red)' }}>
                     Failed to send — please try again
@@ -1305,6 +1356,27 @@ export default function Page() {
           </nav>
         </footer>
       </div>
+
+      {/* ── SEND TOAST ───────────────────────────────────────────────── */}
+      {toastVisible && (
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.35)',
+            zIndex: 50,
+            opacity: toastFading ? 0 : 1,
+            transition: 'opacity 0.5s ease',
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            className="rounded-lg px-8 py-4 text-base font-semibold text-white shadow-lg"
+            style={{ backgroundColor: 'var(--teal)' }}
+          >
+            Message sent
+          </div>
+        </div>
+      )}
     </div>
   )
 }
