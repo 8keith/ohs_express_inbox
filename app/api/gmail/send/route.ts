@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
 
+function rfc2047(value: string): string {
+  return `=?utf-8?B?${Buffer.from(value, 'utf-8').toString('base64')}?=`
+}
+
 function buildRawEmail(to: string, subject: string, body: string): string {
-  const reSubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`
+  const rawSubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`
   const email = [
     `To: ${to}`,
-    `Subject: ${reSubject}`,
+    `Subject: ${rfc2047(rawSubject)}`,
     'Content-Type: text/plain; charset=utf-8',
     'MIME-Version: 1.0',
     '',

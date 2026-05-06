@@ -775,10 +775,17 @@ export default function Page() {
                           {preview}
                         </p>
 
-                        {/* Bottom: tier badge + urgency badge */}
+                        {/* Bottom: tier badge + urgency badge + status */}
                         <div className="flex items-center gap-1.5 pt-0.5">
                           <TierBadge tier={row.tier} />
                           {row.urgency && <UrgencyBadge urgency={row.urgency} />}
+                          <div className="flex-1" />
+                          {(row.status === 'new' || row.status === 'unresolved') && (
+                            <span className="text-[11px] font-medium" style={{ color: 'var(--teal)' }}>New</span>
+                          )}
+                          {row.status === 'resolved' && (
+                            <span className="text-[11px] font-medium" style={{ color: '#16a34a' }}>Resolved</span>
+                          )}
                         </div>
                       </div>
                     </button>
