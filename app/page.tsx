@@ -1247,7 +1247,7 @@ export default function Page() {
               style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
             >
               <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>
-                OHS triage panel
+                OHS Intelligence
               </span>
             </div>
 
@@ -1294,12 +1294,11 @@ export default function Page() {
                         className="mb-1.5 flex items-center justify-between text-[11px]"
                         style={{ color: 'var(--gray-400)' }}
                       >
-                        <span>Response time · {elapsedLabel}</span>
-                        {overdue && (
-                          <span className="font-medium" style={{ color: 'var(--red)' }}>
-                            Overdue · {overdueMin}m
-                          </span>
-                        )}
+                        <span>Response time</span>
+                        <span className="font-medium" style={{ color: overdue ? 'var(--red)' : 'var(--gray-400)' }}>
+                          {elapsedLabel} / {Math.floor(threshold / 60_000)}m
+                          {overdue && ` · Overdue`}
+                        </span>
                       </div>
                       <div
                         className="h-1.5 overflow-hidden rounded-full"
@@ -1327,15 +1326,6 @@ export default function Page() {
                   >
                     Classification
                   </p>
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                    style={{
-                      backgroundColor: 'var(--teal-light)',
-                      color: 'var(--teal-dark)',
-                    }}
-                  >
-                    OHS Intelligence
-                  </span>
                 </div>
 
                 <div className="space-y-2.5">
