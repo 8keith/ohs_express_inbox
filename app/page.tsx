@@ -24,6 +24,7 @@ interface QueueRow {
   gmail_thread_id: string | null
   subject: string | null
   sender: string | null
+  secondary_tags: string[] | null
 }
 
 // Kept for the centre panel (static until Gmail wiring)
@@ -477,7 +478,7 @@ export default function Page() {
     const { data, error } = await supabase
       .from('email_events')
       .select(
-        'id, tier, urgency, inquiry_type, subject, sender, received_at, status, assigned_to, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id'
+        'id, tier, urgency, inquiry_type, subject, sender, received_at, status, assigned_to, assigned_to_name, claimed_at, claim_expires_at, gmail_message_id, gmail_thread_id, secondary_tags'
       )
     if (error) {
       setFetchError(error.message)
@@ -1386,8 +1387,9 @@ export default function Page() {
                 </div>
 
                 {/* Tags */}
+                {selectedQueueRow?.secondary_tags?.length ? (
                 <div className="mt-3.5 flex flex-wrap gap-1.5">
-                  {['Hypertension', 'Callback Required', 'High BP', 'Elderly Patient'].map(
+                  {selectedQueueRow.secondary_tags.map(
                     (tag) => (
                       <span
                         key={tag}
@@ -1402,6 +1404,7 @@ export default function Page() {
                     )
                   )}
                 </div>
+                ) : null}
               </div>
 
               {/* Forward-to card */}
