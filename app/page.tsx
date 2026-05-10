@@ -1074,109 +1074,113 @@ export default function Page() {
               )}
             </div>
 
-            {/* Email body — scrollable, 40% */}
-            <div className="flex-[2] min-h-0 overflow-y-auto px-6 py-5">
-              {selectedQueueRow ? (
-                emailLoading ? (
-                  <div className="flex flex-col gap-3">
-                    {[...Array(8)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-3 animate-pulse rounded"
-                        style={{ backgroundColor: 'var(--gray-100)', width: `${60 + (i % 4) * 10}%` }}
-                      />
-                    ))}
-                  </div>
-                ) : emailError ? (
-                  <p className="text-sm" style={{ color: 'var(--red)' }}>{emailError}</p>
-                ) : liveEmail ? (
-                  (() => {
-                    const { main, signature } = splitBody(liveEmail.body)
-                    return (
-                      <>
-                        <pre
-                          className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
-                          style={{ color: 'var(--gray-900)' }}
-                        >
-                          {main}
-                        </pre>
-                        {signature && (
-                          <>
-                            <button
-                              onClick={() => setShowSignature(v => !v)}
-                              className="mt-3 text-xs"
-                              style={{ color: 'var(--gray-400)' }}
-                            >
-                              {showSignature ? 'Hide signature' : 'View signature'}
-                            </button>
-                            {showSignature && (
-                              <pre
-                                className="whitespace-pre-wrap font-sans text-xs leading-relaxed mt-2"
+            {/* Email body — 40%, flex column so context bar pins to bottom */}
+            <div className="flex-[2] min-h-0 flex flex-col">
+              {/* Scrollable email text */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+                {selectedQueueRow ? (
+                  emailLoading ? (
+                    <div className="flex flex-col gap-3">
+                      {[...Array(8)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-3 animate-pulse rounded"
+                          style={{ backgroundColor: 'var(--gray-100)', width: `${60 + (i % 4) * 10}%` }}
+                        />
+                      ))}
+                    </div>
+                  ) : emailError ? (
+                    <p className="text-sm" style={{ color: 'var(--red)' }}>{emailError}</p>
+                  ) : liveEmail ? (
+                    (() => {
+                      const { main, signature } = splitBody(liveEmail.body)
+                      return (
+                        <>
+                          <pre
+                            className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
+                            style={{ color: 'var(--gray-900)' }}
+                          >
+                            {main}
+                          </pre>
+                          {signature && (
+                            <>
+                              <button
+                                onClick={() => setShowSignature(v => !v)}
+                                className="mt-3 text-xs"
                                 style={{ color: 'var(--gray-400)' }}
                               >
-                                {signature}
-                              </pre>
-                            )}
-                          </>
-                        )}
-                      </>
-                    )
-                  })()
+                                {showSignature ? 'Hide signature' : 'View signature'}
+                              </button>
+                              {showSignature && (
+                                <pre
+                                  className="whitespace-pre-wrap font-sans text-xs leading-relaxed mt-2"
+                                  style={{ color: 'var(--gray-400)' }}
+                                >
+                                  {signature}
+                                </pre>
+                              )}
+                            </>
+                          )}
+                        </>
+                      )
+                    })()
+                  ) : (
+                    <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
+                      Email content unavailable
+                    </p>
+                  )
                 ) : (
-                  <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
-                    Email content unavailable
-                  </p>
-                )
-              ) : (
-                <pre
-                  className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
-                  style={{ color: 'var(--gray-900)' }}
-                >
-                  {selectedEmail.body}
-                </pre>
-              )}
-              {/* Context chip — bottom of email body */}
+                  <pre
+                    className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
+                    style={{ color: 'var(--gray-900)' }}
+                  >
+                    {selectedEmail.body}
+                  </pre>
+                )}
+              </div>
+
+              {/* Inquiry Context Bar — pinned to bottom of email area */}
               {selectedQueueRow && (() => {
                 const hasClassification = selectedQueueRow.inquiry_type && selectedQueueRow.inquiry_type !== 'no_content'
                 if (!hasClassification) {
                   return (
-                    <div
-                      className="mt-4 inline-flex items-center rounded-full border px-3 py-1"
-                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
-                    >
-                      <span className="text-[11px] italic" style={{ color: 'var(--gray-400)' }}>
-                        Good medicine, clearly communicated.
-                      </span>
+                    <div className="flex-shrink-0 px-6 pb-3">
+                      <div
+                        className="flex items-center rounded-2xl border px-4 py-2"
+                        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
+                      >
+                        <span className="text-xs italic" style={{ color: 'var(--gray-400)' }}>
+                          Good medicine, clearly communicated.
+                        </span>
+                      </div>
                     </div>
                   )
                 }
-                const parts: string[] = [
-                  selectedQueueRow.inquiry_type,
-                  'Confidence 94%',
-                  ...(selectedQueueRow.secondary_tags ?? []),
-                ]
                 return (
-                  <div
-                    className="mt-4 inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
-                  >
-                    <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--gray-400)' }}>
-                      Context
-                    </span>
-                    <span className="flex-shrink-0 text-[10px]" style={{ color: 'var(--gray-300)' }}>·</span>
-                    {parts.map((part, i) => (
-                      <span key={i} className="flex items-center gap-1.5 overflow-hidden">
-                        <span
-                          className={i === 0 ? 'truncate text-[11px] font-medium' : 'flex-shrink-0 text-[11px]'}
-                          style={{ color: i === 0 ? 'var(--gray-900)' : 'var(--gray-400)' }}
-                        >
-                          {part}
-                        </span>
-                        {i < parts.length - 1 && (
-                          <span className="flex-shrink-0 text-[10px]" style={{ color: 'var(--gray-300)' }}>·</span>
-                        )}
+                  <div className="flex-shrink-0 px-6 pb-3">
+                    <div
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border px-4 py-2"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
+                    >
+                      <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--gray-400)' }}>
+                        Context
                       </span>
-                    ))}
+                      <span className="flex-shrink-0 text-[13px] font-semibold" style={{ color: 'var(--gray-900)' }}>
+                        {selectedQueueRow.inquiry_type}
+                      </span>
+                      <span className="flex-shrink-0 text-[11px]" style={{ color: 'var(--gray-400)' }}>
+                        Confidence 94%
+                      </span>
+                      {selectedQueueRow.secondary_tags?.map((tag) => (
+                        <span
+                          key={tag}
+                          className="flex-shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                          style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--gray-600)' }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )
               })()}
