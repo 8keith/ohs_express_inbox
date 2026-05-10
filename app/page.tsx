@@ -1139,51 +1139,6 @@ export default function Page() {
                 )}
               </div>
 
-              {/* Inquiry Context Bar — pinned to bottom of email area */}
-              {selectedQueueRow && (() => {
-                const hasClassification = selectedQueueRow.inquiry_type && selectedQueueRow.inquiry_type !== 'no_content'
-                if (!hasClassification) {
-                  return (
-                    <div className="flex-shrink-0 px-6 pb-3">
-                      <div
-                        className="flex items-center rounded-2xl border px-4 py-2"
-                        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
-                      >
-                        <span className="text-xs italic" style={{ color: 'var(--gray-400)' }}>
-                          Good medicine, clearly communicated.
-                        </span>
-                      </div>
-                    </div>
-                  )
-                }
-                return (
-                  <div className="flex-shrink-0 px-6 pb-3">
-                    <div
-                      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border px-4 py-2"
-                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
-                    >
-                      <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--gray-400)' }}>
-                        Context
-                      </span>
-                      <span className="flex-shrink-0 text-[13px] font-semibold" style={{ color: 'var(--gray-900)' }}>
-                        {selectedQueueRow.inquiry_type}
-                      </span>
-                      <span className="flex-shrink-0 text-[11px]" style={{ color: 'var(--gray-400)' }}>
-                        Confidence 94%
-                      </span>
-                      {selectedQueueRow.secondary_tags?.map((tag) => (
-                        <span
-                          key={tag}
-                          className="flex-shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium"
-                          style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--gray-600)' }}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
             </div>
 
             {/* Draft compose — 60%, flex column so textarea fills space */}
@@ -1194,23 +1149,49 @@ export default function Page() {
                 backgroundColor: 'var(--gray-50)',
               }}
             >
-              <div className="mb-2.5 flex flex-shrink-0 items-center justify-between">
-                <span className="text-sm font-semibold" style={{ color: 'var(--gray-900)' }}>
+              {/* Draft header: label + Inquiry Context Bar */}
+              <div className="mb-2.5 flex flex-shrink-0 items-center gap-3 min-w-0">
+                <span className="flex-shrink-0 text-sm font-semibold" style={{ color: 'var(--gray-900)' }}>
                   Draft reply
                 </span>
-                <span
-                  className="flex items-center gap-1.5 rounded-md text-xs font-medium"
-                  style={{
-                    padding: '0.3rem 0.8rem',
-                    backgroundColor: 'var(--amber-light)',
-                    color: 'var(--amber)',
-                  }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                    <path d="M5 0a5 5 0 110 10A5 5 0 015 0zm.5 2.5H4.5v3.25l2.25 1.35.5-.83-2-.25V2.5z" />
-                  </svg>
-                  AI draft — review before sending
-                </span>
+                {selectedQueueRow && (() => {
+                  const hasClassification = selectedQueueRow.inquiry_type && selectedQueueRow.inquiry_type !== 'no_content'
+                  if (!hasClassification) {
+                    return (
+                      <span
+                        className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] italic"
+                        style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--gray-400)' }}
+                      >
+                        Good medicine, clearly communicated.
+                      </span>
+                    )
+                  }
+                  return (
+                    <span
+                      className="inline-flex min-w-0 items-center gap-2 overflow-hidden rounded-full border px-3 py-1"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
+                    >
+                      <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--gray-400)' }}>
+                        Context
+                      </span>
+                      <span className="flex-shrink-0 text-[12px] font-semibold" style={{ color: 'var(--gray-900)' }}>
+                        {selectedQueueRow.inquiry_type}
+                      </span>
+                      <span className="flex-shrink-0 text-[11px]" style={{ color: 'var(--gray-400)' }}>
+                        Confidence 94%
+                      </span>
+                      {selectedQueueRow.secondary_tags?.map((tag) => (
+                        <span
+                          key={tag}
+                          className="flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                          style={{ backgroundColor: 'var(--gray-100)', color: 'var(--gray-600)' }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  )
+                })()}
               </div>
               {draftMode === 'choice' ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3">
@@ -1231,6 +1212,18 @@ export default function Page() {
                   </button>
                 </div>
               ) : (
+                <>
+                <div className="mb-1.5 flex justify-end">
+                  <span
+                    className="flex items-center gap-1 text-[10px] font-medium"
+                    style={{ color: 'var(--amber)' }}
+                  >
+                    <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor">
+                      <path d="M5 0a5 5 0 110 10A5 5 0 015 0zm.5 2.5H4.5v3.25l2.25 1.35.5-.83-2-.25V2.5z" />
+                    </svg>
+                    AI draft — review before sending
+                  </span>
+                </div>
                 <textarea
                   className="w-full flex-1 resize-none rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
                   style={{
@@ -1247,6 +1240,7 @@ export default function Page() {
                   }}
                   disabled={draftLoading}
                 />
+                </>
               )}
               <div className="mt-3 flex flex-shrink-0 items-center gap-2">
                 <button
