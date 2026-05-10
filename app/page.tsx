@@ -1137,6 +1137,58 @@ export default function Page() {
               )}
             </div>
 
+            {/* Reply context strip */}
+            {selectedQueueRow && (() => {
+              const hasClassification = selectedQueueRow.inquiry_type && selectedQueueRow.inquiry_type !== 'no_content'
+              if (!hasClassification) {
+                return (
+                  <div
+                    className="mx-6 mb-0 mt-3 flex-shrink-0 rounded-md border px-3.5 py-2.5"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
+                  >
+                    <span className="text-xs italic" style={{ color: 'var(--gray-400)' }}>
+                      Good medicine, clearly communicated.
+                    </span>
+                  </div>
+                )
+              }
+              return (
+                <div
+                  className="mx-6 mb-0 mt-3 flex-shrink-0 rounded-md border px-3.5 py-2.5"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="mb-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--gray-400)' }}>
+                        Reply context
+                      </p>
+                      <p className="truncate text-sm font-medium" style={{ color: 'var(--gray-900)' }}>
+                        {selectedQueueRow.inquiry_type}
+                      </p>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-1.5 pt-0.5">
+                      <TierBadge tier={selectedQueueRow.tier} />
+                      <UrgencyBadge urgency={selectedQueueRow.urgency} />
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px]" style={{ color: 'var(--gray-400)' }}>
+                      Confidence 94%
+                    </span>
+                    {selectedQueueRow.secondary_tags?.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        style={{ backgroundColor: 'var(--gray-100)', color: 'var(--gray-600)' }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* Draft compose — 60%, flex column so textarea fills space */}
             <div
               className="flex flex-[3] min-h-0 flex-col border-t px-6 py-4"
