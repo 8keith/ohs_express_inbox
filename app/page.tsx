@@ -1135,54 +1135,52 @@ export default function Page() {
                   {selectedEmail.body}
                 </pre>
               )}
-            </div>
-
-            {/* Reply context strip */}
-            {selectedQueueRow && (() => {
-              const hasClassification = selectedQueueRow.inquiry_type && selectedQueueRow.inquiry_type !== 'no_content'
-              if (!hasClassification) {
+              {/* Context chip — bottom of email body */}
+              {selectedQueueRow && (() => {
+                const hasClassification = selectedQueueRow.inquiry_type && selectedQueueRow.inquiry_type !== 'no_content'
+                if (!hasClassification) {
+                  return (
+                    <div
+                      className="mt-4 inline-flex items-center rounded-full border px-3 py-1"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
+                    >
+                      <span className="text-[11px] italic" style={{ color: 'var(--gray-400)' }}>
+                        Good medicine, clearly communicated.
+                      </span>
+                    </div>
+                  )
+                }
+                const parts: string[] = [
+                  selectedQueueRow.inquiry_type,
+                  'Confidence 94%',
+                  ...(selectedQueueRow.secondary_tags ?? []),
+                ]
                 return (
                   <div
-                    className="mx-6 mt-3 flex-shrink-0 rounded border px-3 py-1.5"
+                    className="mt-4 inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1"
                     style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
                   >
-                    <span className="text-[11px] italic" style={{ color: 'var(--gray-400)' }}>
-                      Good medicine, clearly communicated.
-                    </span>
-                  </div>
-                )
-              }
-              return (
-                <div
-                  className="mx-6 mt-3 flex-shrink-0 rounded border px-3 py-1.5"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
-                >
-                  <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
                     <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--gray-400)' }}>
                       Context
                     </span>
-                    <span className="flex-shrink-0 text-[12px] font-medium" style={{ color: 'var(--gray-900)' }}>
-                      {selectedQueueRow.inquiry_type}
-                    </span>
-                    <span className="flex-shrink-0 text-[11px]" style={{ color: 'var(--gray-400)' }}>
-                      Confidence 94%
-                    </span>
-                    {selectedQueueRow.secondary_tags?.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full px-2 py-0.5 text-[11px] font-medium"
-                        style={{ backgroundColor: 'var(--gray-100)', color: 'var(--gray-600)' }}
-                      >
-                        {tag}
+                    <span className="flex-shrink-0 text-[10px]" style={{ color: 'var(--gray-300)' }}>·</span>
+                    {parts.map((part, i) => (
+                      <span key={i} className="flex items-center gap-1.5 overflow-hidden">
+                        <span
+                          className={i === 0 ? 'truncate text-[11px] font-medium' : 'flex-shrink-0 text-[11px]'}
+                          style={{ color: i === 0 ? 'var(--gray-900)' : 'var(--gray-400)' }}
+                        >
+                          {part}
+                        </span>
+                        {i < parts.length - 1 && (
+                          <span className="flex-shrink-0 text-[10px]" style={{ color: 'var(--gray-300)' }}>·</span>
+                        )}
                       </span>
                     ))}
-                    <span className="flex-shrink-0 ml-auto">
-                      <UrgencyBadge urgency={selectedQueueRow.urgency} />
-                    </span>
                   </div>
-                </div>
-              )
-            })()}
+                )
+              })()}
+            </div>
 
             {/* Draft compose — 60%, flex column so textarea fills space */}
             <div
