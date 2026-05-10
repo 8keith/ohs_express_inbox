@@ -1143,10 +1143,10 @@ export default function Page() {
               if (!hasClassification) {
                 return (
                   <div
-                    className="mx-6 mb-0 mt-3 flex-shrink-0 rounded-md border px-3.5 py-2.5"
+                    className="mx-6 mt-3 flex-shrink-0 rounded border px-3 py-1.5"
                     style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
                   >
-                    <span className="text-xs italic" style={{ color: 'var(--gray-400)' }}>
+                    <span className="text-[11px] italic" style={{ color: 'var(--gray-400)' }}>
                       Good medicine, clearly communicated.
                     </span>
                   </div>
@@ -1154,25 +1154,17 @@ export default function Page() {
               }
               return (
                 <div
-                  className="mx-6 mb-0 mt-3 flex-shrink-0 rounded-md border px-3.5 py-2.5"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'white' }}
+                  className="mx-6 mt-3 flex-shrink-0 rounded border px-3 py-1.5"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--gray-50)' }}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="mb-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--gray-400)' }}>
-                        Reply context
-                      </p>
-                      <p className="truncate text-sm font-medium" style={{ color: 'var(--gray-900)' }}>
-                        {selectedQueueRow.inquiry_type}
-                      </p>
-                    </div>
-                    <div className="flex flex-shrink-0 items-center gap-1.5 pt-0.5">
-                      <TierBadge tier={selectedQueueRow.tier} />
-                      <UrgencyBadge urgency={selectedQueueRow.urgency} />
-                    </div>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px]" style={{ color: 'var(--gray-400)' }}>
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                    <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--gray-400)' }}>
+                      Context
+                    </span>
+                    <span className="flex-shrink-0 text-[12px] font-medium" style={{ color: 'var(--gray-900)' }}>
+                      {selectedQueueRow.inquiry_type}
+                    </span>
+                    <span className="flex-shrink-0 text-[11px]" style={{ color: 'var(--gray-400)' }}>
                       Confidence 94%
                     </span>
                     {selectedQueueRow.secondary_tags?.map((tag) => (
@@ -1184,6 +1176,9 @@ export default function Page() {
                         {tag}
                       </span>
                     ))}
+                    <span className="flex-shrink-0 ml-auto">
+                      <UrgencyBadge urgency={selectedQueueRow.urgency} />
+                    </span>
                   </div>
                 </div>
               )
