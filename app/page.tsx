@@ -754,6 +754,21 @@ export default function Page() {
           >
             <span className="text-xs font-semibold text-white">KD</span>
           </div>
+
+          {/* Sign out */}
+          <button
+            onClick={async () => {
+              try {
+                await fetch('/api/admin/logout', { method: 'POST' })
+              } finally {
+                window.location.href = '/admin/login'
+              }
+            }}
+            className="ml-3 text-xs font-medium transition-colors hover:underline"
+            style={{ color: 'var(--gray-400)' }}
+          >
+            Sign out
+          </button>
         </header>
 
         {/* ═══════════════════════════════════════════════════════════════

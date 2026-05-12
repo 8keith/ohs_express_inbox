@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
+import { COOKIE_NAME, verifySessionToken } from '@/lib/admin-auth'
+
+export const dynamic = 'force-dynamic'
 
 function rfc2047(value: string): string {
   return `=?utf-8?B?${Buffer.from(value, 'utf-8').toString('base64')}?=`
@@ -21,6 +24,10 @@ function buildRawEmail(to: string, subject: string, body: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const token = request.cookies.get(COOKIE_NAME)?.value
+  if (!(await verifySessionToken(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const { messageId, threadId, to, subject, body } = await request.json()
 

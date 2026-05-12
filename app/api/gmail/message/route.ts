@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google, gmail_v1 } from 'googleapis'
+import { COOKIE_NAME, verifySessionToken } from '@/lib/admin-auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const token = request.cookies.get(COOKIE_NAME)?.value
+  if (!(await verifySessionToken(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const messageId = request.nextUrl.searchParams.get('messageId')
   if (!messageId) {
     return NextResponse.json({ error: 'messageId is required' }, { status: 400 })

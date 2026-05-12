@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { COOKIE_NAME, verifySessionToken } from '@/lib/admin-auth'
+
+export const dynamic = 'force-dynamic'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -7,6 +10,10 @@ const SYSTEM_PROMPT =
   "You are a helpful medical clinic receptionist. Write a brief, warm, professional reply to this parent email. Keep it under 100 words. Do not include any medical advice. Sign off as 'The Care Team'."
 
 export async function POST(request: NextRequest) {
+  const token = request.cookies.get(COOKIE_NAME)?.value
+  if (!(await verifySessionToken(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const { subject, from, body } = await request.json()
 
