@@ -514,7 +514,7 @@ export default function Page() {
     queue.forEach(r => seenIdsRef.current.add(r.id))
     if (fresh.size === 0) return
     setNewIds(fresh)
-    const t = setTimeout(() => setNewIds(new Set()), 350)
+    const t = setTimeout(() => setNewIds(new Set()), 700)
     return () => clearTimeout(t)
   }, [queue])
 
