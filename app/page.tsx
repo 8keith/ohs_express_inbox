@@ -317,11 +317,6 @@ const FORWARD_OPTIONS = [
 const CURRENT_USER = 'keith_agnew'
 const CURRENT_USER_NAME = 'Keith Agnew'
 
-// Card entrance stagger — applied to cards in the newIds cohort.
-// Cap ensures large bursts compress into a wave instead of a long unfurl.
-const STAGGER_MS = 40
-const STAGGER_CAP = 8
-
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
 const TIER_STYLES: Record<string, React.CSSProperties> = {
@@ -519,7 +514,7 @@ export default function Page() {
     queue.forEach(r => seenIdsRef.current.add(r.id))
     if (fresh.size === 0) return
     setNewIds(fresh)
-    const t = setTimeout(() => setNewIds(new Set()), 1000)
+    const t = setTimeout(() => setNewIds(new Set()), 700)
     return () => clearTimeout(t)
   }, [queue])
 
@@ -538,18 +533,6 @@ export default function Page() {
     return true
   })
   const selectedQueueRow = queue.find((r) => r.id === selectedId) ?? null
-
-  // Stagger order for card entrance — keyed off the same array used for rendering (filteredQueue)
-  const newIdOrder = new Map<string, number>()
-  {
-    let i = 0
-    for (const r of filteredQueue) {
-      if (newIds.has(r.id)) {
-        newIdOrder.set(r.id, Math.min(i, STAGGER_CAP - 1))
-        i++
-      }
-    }
-  }
 
   // ── Claim helpers ──
   async function claimRow(row: QueueRow): Promise<boolean> {
@@ -950,17 +933,12 @@ export default function Page() {
                         padding: '14px 16px',
                       }
 
-                  const delaySlot = newIdOrder.get(row.id)
-                  const animationDelay = delaySlot !== undefined && delaySlot > 0
-                    ? `${delaySlot * STAGGER_MS}ms`
-                    : undefined
-
                   return (
                     <button
                       key={row.id}
                       onClick={() => { setSelectedId(row.id); fetchEmailForRow(row) }}
                       className={`flex w-full cursor-pointer items-start gap-3 text-left transition-colors${newIds.has(row.id) ? ' card-in' : ''}${leavingId === row.id ? ' card-out' : ''}`}
-                      style={animationDelay ? { ...cardStyle, animationDelay } : cardStyle}
+                      style={cardStyle}
                     >
                       {/* Avatar */}
                       <div
