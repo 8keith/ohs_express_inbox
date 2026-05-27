@@ -1078,6 +1078,11 @@ export default function Page() {
                     Email content unavailable
                   </p>
                 )
+              ) : loading ? (
+                <div className="flex flex-col gap-2">
+                  <div className="h-4 w-3/4 animate-pulse rounded" style={{ backgroundColor: 'var(--gray-100)' }} />
+                  <div className="h-3 w-1/2 animate-pulse rounded" style={{ backgroundColor: 'var(--gray-100)' }} />
+                </div>
               ) : (
                 <>
                   <div className="mb-2 flex items-start gap-2">
@@ -1168,6 +1173,16 @@ export default function Page() {
                       Email content unavailable
                     </p>
                   )
+                ) : loading ? (
+                  <div className="flex flex-col gap-3">
+                    {[...Array(8)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-3 animate-pulse rounded"
+                        style={{ backgroundColor: 'var(--gray-100)', width: `${60 + (i % 4) * 10}%` }}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <pre
                     className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
