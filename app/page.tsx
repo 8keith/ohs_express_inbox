@@ -317,6 +317,13 @@ const FORWARD_OPTIONS = [
 const CURRENT_USER = 'keith_agnew'
 const CURRENT_USER_NAME = 'Keith Agnew'
 
+// Demo deep-link mapping: email_events row id → patient timeline target.
+// Hardcoded for the first pass; future versions can drive this from a Supabase column.
+const PATIENT_TIMELINE_MAP: Record<string, { slug: string; name: string }> = {
+  '8a8e3d43-06d2-47af-9343-fb8e74f9aa3e': { slug: 'noah-lee', name: 'Noah Lee' },
+}
+const TIMELINE_BASE_URL = 'https://email.ohs.tools/timeline'
+
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
 const TIER_STYLES: Record<string, React.CSSProperties> = {
@@ -486,9 +493,15 @@ export default function Page() {
       const rows = (data ?? []) as QueueRow[]
       setQueue(rows)
       if (!silent && rows.length > 0) {
-        const first = sortQueue(rows, true)[0]
-        setSelectedId(first.id)
-        fetchEmailForRow(first)
+        // Deep-link support: ?id=<email_events uuid> selects that row if it exists.
+        let target: QueueRow | undefined
+        if (typeof window !== 'undefined') {
+          const deepLinkId = new URLSearchParams(window.location.search).get('id')
+          if (deepLinkId) target = rows.find((r) => r.id === deepLinkId)
+        }
+        const selected = target ?? sortQueue(rows, true)[0]
+        setSelectedId(selected.id)
+        fetchEmailForRow(selected)
       }
       setFetchError(null)
     }
@@ -1043,6 +1056,17 @@ export default function Page() {
                           <span style={{ color: 'var(--gray-400)' }}>To: </span>
                           <span style={{ color: 'var(--teal)' }}>OHS Care Team &lt;hello@ohsdemo.com&gt;</span>
                         </span>
+                        {selectedQueueRow && PATIENT_TIMELINE_MAP[selectedQueueRow.id] && (
+                          <a
+                            href={`${TIMELINE_BASE_URL}/${PATIENT_TIMELINE_MAP[selectedQueueRow.id].slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-0.5 inline-flex items-center gap-1 hover:underline"
+                            style={{ color: 'var(--teal)' }}
+                          >
+                            → View Patient Timeline
+                          </a>
+                        )}
                       </div>
                       <span className="flex-shrink-0" style={{ color: 'var(--gray-400)' }}>
                         {formatEmailDate(liveEmail.date)}
