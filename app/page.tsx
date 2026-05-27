@@ -320,7 +320,7 @@ const CURRENT_USER_NAME = 'Keith Agnew'
 // Demo deep-link mapping: email_events row id → patient timeline target.
 // Hardcoded for the first pass; future versions can drive this from a Supabase column.
 const PATIENT_TIMELINE_MAP: Record<string, { slug: string; name: string }> = {
-  '8a8e3d43-06d2-47af-9343-fb8e74f9aa3e': { slug: 'noah-lee', name: 'Noah Lee' },
+  'b44c7a7d-6749-4935-8053-0b090823f7b6': { slug: 'noah-lee', name: 'Noah Lee' },
 }
 const TIMELINE_BASE_URL = 'https://email.ohs.tools/timeline'
 
